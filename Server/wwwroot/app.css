@@ -1,0 +1,53 @@
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    background: #eef2f6;
+    color: #1f2933;
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+a,
+.btn-link {
+    color: #0f766e;
+}
+
+h1:focus {
+    outline: none;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #2f9e44;
+}
+
+.invalid {
+    outline: 1px solid #d64545;
+}
+
+.validation-message {
+    color: #d64545;
+}
+
+#blazor-error-ui {
+    background: #fff3cd;
+    border-top: 1px solid #f0d98c;
+    bottom: 0;
+    box-shadow: 0 -1px 8px rgba(15, 23, 42, 0.16);
+    box-sizing: border-box;
+    color: #3f2d00;
+    display: none;
+    left: 0;
+    padding: 0.65rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 2000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}

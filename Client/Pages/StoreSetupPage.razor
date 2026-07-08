@@ -1,0 +1,46 @@
+@page "/settings"
+
+<div class="content-header px-0 pt-0">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-kicker">System setup</div>
+            <h1 class="page-title mb-0">Store Setup</h1>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    @foreach (var area in setupAreas)
+    {
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="metric-icon mr-3">
+                            <i class="@area.Icon"></i>
+                        </div>
+                        <div>
+                            <h3 class="h6 font-weight-bold mb-1">@area.Title</h3>
+                            <p class="text-muted mb-2">@area.Description</p>
+                            <span class="@area.BadgeClass">@area.Status</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly SetupArea[] setupAreas =
+    [
+        new("fas fa-building", "Tenant Profile", "One codebase can host many paying clients through tenant records and subscription state.", "Seeded", "badge badge-soft-success"),
+        new("fas fa-store", "Branch Profile", "Store address, BIR permit details, and business type settings live per branch.", "Seeded", "badge badge-soft-success"),
+        new("fas fa-cash-register", "Terminal Setup", "Each POS terminal owns its machine identity and receipt number series.", "Seeded", "badge badge-soft-success"),
+        new("fas fa-receipt", "Receipt Layout", "Normal printer HTML output comes first, with ESC/POS bridge planned next.", "Planned", "badge badge-soft-warning"),
+        new("fas fa-users-cog", "Roles and Permissions", "Developer, SuperAdmin, Admin, Manager, Cashier, Inventory Staff, and Auditor roles are seeded.", "Seeded", "badge badge-soft-success"),
+        new("fas fa-calendar-check", "Subscription Rules", "Local license cache and grace period will keep stores running during outages.", "Foundation", "badge badge-soft-warning")
+    ];
+
+    private sealed record SetupArea(string Icon, string Title, string Description, string Status, string BadgeClass);
+}

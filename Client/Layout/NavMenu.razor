@@ -1,0 +1,120 @@
+@implements IDisposable
+
+@inject NavigationManager NavigationManager
+
+<aside class="main-sidebar sidebar-dark-primary elevation-2">
+    <a href="" class="brand-link">
+        <span class="brand-badge">BP</span>
+        <span class="brand-text font-weight-semibold">BIR POS System</span>
+    </a>
+
+    <div class="sidebar">
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex align-items-center">
+            <div class="image">
+                <div class="user-initials">NS</div>
+            </div>
+            <div class="info">
+                <a href="" class="d-block">Northstar Market Cafe</a>
+                <span class="sidebar-subtitle">Main Branch / POS-01</span>
+            </div>
+        </div>
+
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column nav-child-indent" data-widget="treeview" role="menu">
+                <li class="nav-header">REGISTER</li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <p>Dashboard</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="pos">
+                        <i class="nav-icon fas fa-cash-register"></i>
+                        <p>POS Register</p>
+                    </NavLink>
+                </li>
+
+                <li class="nav-header">BACK OFFICE</li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="products">
+                        <i class="nav-icon fas fa-boxes"></i>
+                        <p>Products</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="reports">
+                        <i class="nav-icon fas fa-file-invoice-dollar"></i>
+                        <p>BIR Reports</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="sync">
+                        <i class="nav-icon fas fa-cloud-upload-alt"></i>
+                        <p>
+                            Sync Center
+                            <span class="right badge badge-accent">Ready</span>
+                        </p>
+                    </NavLink>
+                </li>
+
+                <li class="nav-header">SYSTEM</li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="settings">
+                        <i class="nav-icon fas fa-store"></i>
+                        <p>Store Setup</p>
+                    </NavLink>
+                </li>
+                <AuthorizeView>
+                    <Authorized>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="Account/Manage">
+                                <i class="nav-icon fas fa-user-cog"></i>
+                                <p>Account</p>
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <form action="Account/Logout" method="post">
+                                <AntiforgeryToken />
+                                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                                <button type="submit" class="nav-link logout-link">
+                                    <i class="nav-icon fas fa-sign-out-alt"></i>
+                                    <p>Logout</p>
+                                </button>
+                            </form>
+                        </li>
+                    </Authorized>
+                    <NotAuthorized>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="Account/Login">
+                                <i class="nav-icon fas fa-sign-in-alt"></i>
+                                <p>Login</p>
+                            </NavLink>
+                        </li>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </ul>
+        </nav>
+    </div>
+</aside>
+
+@code {
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

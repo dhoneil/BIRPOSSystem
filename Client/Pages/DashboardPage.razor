@@ -1,0 +1,168 @@
+@page "/"
+@inject IDashboardService DashboardService
+
+<div class="content-header px-0 pt-0">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-kicker">Local-first SaaS POS</div>
+            <h1 class="page-title mb-0">Operations Dashboard</h1>
+        </div>
+        <div class="col-auto">
+            <NavLink class="btn btn-primary" href="pos">
+                <i class="fas fa-cash-register mr-1"></i> Open Register
+            </NavLink>
+        </div>
+    </div>
+</div>
+
+@if (dashboard is null)
+{
+    <div class="card">
+        <div class="card-body">
+            <i class="fas fa-circle-notch fa-spin mr-2"></i> Loading local store data...
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="metric-card d-flex justify-content-between">
+                <div>
+                    <div class="metric-label">Today Sales</div>
+                    <div class="metric-value">@Money(dashboard.Summary.TodaySales)</div>
+                </div>
+                <div class="metric-icon"><i class="fas fa-chart-line"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="metric-card d-flex justify-content-between">
+                <div>
+                    <div class="metric-label">Transactions</div>
+                    <div class="metric-value">@dashboard.Summary.TodayTransactions</div>
+                </div>
+                <div class="metric-icon"><i class="fas fa-receipt"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="metric-card d-flex justify-content-between">
+                <div>
+                    <div class="metric-label">Cash Position</div>
+                    <div class="metric-value">@Money(dashboard.Summary.CashInDrawer)</div>
+                </div>
+                <div class="metric-icon"><i class="fas fa-wallet"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="metric-card d-flex justify-content-between">
+                <div>
+                    <div class="metric-label">Pending Sync</div>
+                    <div class="metric-value">@dashboard.Summary.PendingSyncItems</div>
+                </div>
+                <div class="metric-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mb-3">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center">
+                    <h3 class="card-title mb-0">Recent Sales</h3>
+                    <span class="badge badge-soft-success ml-auto">@dashboard.Summary.ActiveShift</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (dashboard.RecentSales.Count == 0)
+                    {
+                        <div class="empty-state m-3">
+                            <i class="fas fa-receipt fa-2x mb-2"></i>
+                            <span>No sales recorded today.</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice</th>
+                                        <th>Time</th>
+                                        <th>Cashier</th>
+                                        <th class="text-right">Total</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var sale in dashboard.RecentSales)
+                                    {
+                                        <tr>
+                                            <td class="font-weight-bold">@sale.InvoiceNumber</td>
+                                            <td>@sale.SoldAt.ToLocalTime().ToString("hh:mm tt")</td>
+                                            <td>@sale.CashierName</td>
+                                            <td class="text-right">@Money(sale.NetTotal)</td>
+                                            <td><span class="badge badge-soft-success">@sale.Status</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Store Health</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="metric-label">Subscription</div>
+                        <div class="font-weight-bold">@dashboard.Summary.SubscriptionStatus</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="metric-label">Last Cloud Upload</div>
+                        <div class="font-weight-bold">@LastSyncText</div>
+                    </div>
+                    <div class="metric-label">Low Stock Alerts</div>
+                    @if (dashboard.InventoryAlerts.Count == 0)
+                    {
+                        <span class="badge badge-soft-success">All tracked items are healthy</span>
+                    }
+                    else
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var item in dashboard.InventoryAlerts)
+                            {
+                                <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="font-weight-bold">@item.ProductName</div>
+                                        <small class="text-muted">@item.Sku</small>
+                                    </div>
+                                    <span class="badge badge-soft-warning">@item.QuantityOnHand / @item.ReorderPoint</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private DashboardDto? dashboard;
+
+    private string LastSyncText =>
+        dashboard?.Summary.LastSyncAt == DateTime.MinValue
+            ? "Not uploaded yet"
+            : dashboard!.Summary.LastSyncAt.ToLocalTime().ToString("MMM d, yyyy hh:mm tt");
+
+    protected override async Task OnInitializedAsync()
+    {
+        dashboard = await DashboardService.GetDashboardAsync();
+    }
+
+    private static string Money(decimal value) => $"PHP {value:N2}";
+}

@@ -1,0 +1,283 @@
+@page "/pos"
+@inject IPOSService POSService
+
+<div class="content-header px-0 pt-0">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-kicker">Retail and cafe-ready</div>
+            <h1 class="page-title mb-0">POS Register</h1>
+        </div>
+        <div class="col-auto text-right">
+            @if (catalog?.RegisterState is not null)
+            {
+                <div class="text-muted small">@catalog.RegisterState.BranchName / @catalog.RegisterState.TerminalCode</div>
+                <div class="font-weight-bold">@catalog.RegisterState.NextInvoiceNumber</div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert @messageClass alert-dismissible">
+        <button type="button" class="close" @onclick="() => message = null">&times;</button>
+        @message
+    </div>
+}
+
+@if (catalog is null)
+{
+    <div class="card">
+        <div class="card-body">
+            <i class="fas fa-circle-notch fa-spin mr-2"></i> Loading register...
+        </div>
+    </div>
+}
+else
+{
+    <div class="pos-grid">
+        <div>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row align-items-end">
+                        <div class="col-lg-7 mb-2 mb-lg-0">
+                            <label class="small text-muted mb-1">Search or barcode</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                                </div>
+                                <input class="form-control form-control-lg" @bind="search" @bind:event="oninput" placeholder="SKU, barcode, or item name" />
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <label class="small text-muted mb-1">Category</label>
+                            <div class="btn-group btn-group-toggle d-flex flex-wrap">
+                                <button class="@CategoryButtonClass(null)" @onclick="() => selectedCategoryId = null">All</button>
+                                @foreach (var category in catalog.Categories)
+                                {
+                                    <button class="@CategoryButtonClass(category.Id)" @onclick="() => selectedCategoryId = category.Id">@category.Name</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="product-grid">
+                @foreach (var product in FilteredProducts)
+                {
+                    <button type="button" class="product-tile" @onclick="() => AddToCart(product)">
+                        <span class="product-tile-name">@product.Name</span>
+                        <span class="product-tile-meta">@product.Sku / @product.CategoryName</span>
+                        <span class="product-tile-meta">Stock: @product.QuantityOnHand.ToString("N0")</span>
+                        <span class="product-tile-price">@Money(product.Price)</span>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="cart-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex align-items-center">
+                        <h3 class="card-title mb-0">Current Sale</h3>
+                        <button type="button" class="btn btn-sm btn-outline-danger ml-auto" @onclick="ClearCart" disabled="@(!cart.Any())">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!cart.Any())
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-shopping-basket fa-2x mb-2"></i>
+                            <span>Add products to start a sale.</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var line in cart)
+                        {
+                            <div class="cart-line">
+                                <div class="d-flex">
+                                    <div class="cart-line-name">@line.Product.Name</div>
+                                    <div class="ml-auto font-weight-bold">@Money(line.LineTotal)</div>
+                                </div>
+                                <div class="d-flex align-items-center mt-2">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-secondary" @onclick="() => ChangeQuantity(line, -1)">-</button>
+                                        <button class="btn btn-light disabled">@line.Quantity</button>
+                                        <button class="btn btn-outline-secondary" @onclick="() => ChangeQuantity(line, 1)">+</button>
+                                    </div>
+                                    <span class="text-muted small ml-2">@Money(line.Product.Price) each</span>
+                                </div>
+                            </div>
+                        }
+                    }
+
+                    <div class="form-group mt-3">
+                        <label>Order Type</label>
+                        <select class="form-control" @bind="orderType">
+                            <option>Retail</option>
+                            <option>Takeout</option>
+                            <option>Dine-in</option>
+                            <option>Delivery</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Customer / Queue Name</label>
+                        <input class="form-control" @bind="customerName" placeholder="Optional" />
+                    </div>
+                    <div class="form-group">
+                        <label>Manual Discount</label>
+                        <input class="form-control" type="number" min="0" step="0.01" @bind="manualDiscount" />
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select class="form-control" @bind="paymentMethod">
+                            <option>Cash</option>
+                            <option>Card</option>
+                            <option>E-Wallet</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount Tendered</label>
+                        <input class="form-control form-control-lg" type="number" min="0" step="0.01" @bind="amountTendered" />
+                    </div>
+
+                    <div class="d-flex justify-content-between text-muted">
+                        <span>Subtotal</span>
+                        <span>@Money(Subtotal)</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted">
+                        <span>Discount</span>
+                        <span>@Money(manualDiscount)</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="font-weight-bold">Total</span>
+                        <span class="cart-total">@Money(NetTotal)</span>
+                    </div>
+                    <button type="button" class="btn btn-accent btn-lg btn-block mt-3" @onclick="CheckoutAsync" disabled="@(!CanCheckout)">
+                        <i class="fas fa-check-circle mr-1"></i> Complete Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PosCatalogDto? catalog;
+    private readonly List<CartLine> cart = [];
+    private Guid? selectedCategoryId;
+    private string search = string.Empty;
+    private string orderType = "Retail";
+    private string? customerName;
+    private string paymentMethod = "Cash";
+    private decimal manualDiscount;
+    private decimal amountTendered;
+    private string? message;
+    private string messageClass = "alert-info";
+
+    private IEnumerable<ProductDto> FilteredProducts =>
+        catalog?.Products.Where(product =>
+            (SelectedCategoryName is null || SelectedCategoryName == product.CategoryName) &&
+            (string.IsNullOrWhiteSpace(search) ||
+             product.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+             product.Sku.Contains(search, StringComparison.OrdinalIgnoreCase))) ?? [];
+
+    private string? SelectedCategoryName =>
+        selectedCategoryId is null
+            ? null
+            : catalog?.Categories.FirstOrDefault(c => c.Id == selectedCategoryId.Value)?.Name;
+
+    private decimal Subtotal => cart.Sum(line => line.LineTotal);
+    private decimal NetTotal => Math.Max(0, Subtotal - manualDiscount);
+    private bool CanCheckout => cart.Any() && amountTendered >= NetTotal && NetTotal > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCatalogAsync();
+    }
+
+    private async Task LoadCatalogAsync()
+    {
+        catalog = await POSService.GetCatalogAsync();
+    }
+
+    private void AddToCart(ProductDto product)
+    {
+        var existing = cart.FirstOrDefault(line => line.Product.Id == product.Id);
+        if (existing is null)
+        {
+            cart.Add(new CartLine(product));
+        }
+        else
+        {
+            existing.Quantity++;
+        }
+
+        amountTendered = NetTotal;
+    }
+
+    private void ChangeQuantity(CartLine line, int delta)
+    {
+        line.Quantity += delta;
+        if (line.Quantity <= 0)
+        {
+            cart.Remove(line);
+        }
+
+        amountTendered = NetTotal;
+    }
+
+    private void ClearCart()
+    {
+        cart.Clear();
+        manualDiscount = 0;
+        amountTendered = 0;
+        customerName = null;
+    }
+
+    private async Task CheckoutAsync()
+    {
+        message = null;
+
+        var request = new CreateSaleRequest(
+            cart.Select(line => new CartLineRequest(line.Product.Id, line.Quantity, line.Product.Price, 0)).ToList(),
+            [new PaymentRequest(paymentMethod, amountTendered, null)],
+            manualDiscount,
+            customerName,
+            orderType,
+            null);
+
+        var response = await POSService.CreateSaleAsync(request);
+        if (!response.IsSuccessStatusCode)
+        {
+            messageClass = "alert-danger";
+            message = await response.Content.ReadAsStringAsync();
+            return;
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<CreateSaleResponse>();
+        messageClass = "alert-success";
+        message = $"Sale {result?.InvoiceNumber} completed. Change due: {Money(result?.ChangeDue ?? 0)}.";
+        ClearCart();
+        await LoadCatalogAsync();
+    }
+
+    private string CategoryButtonClass(Guid? categoryId) =>
+        selectedCategoryId == categoryId
+            ? "btn btn-primary btn-sm mr-1 mb-1"
+            : "btn btn-outline-secondary btn-sm mr-1 mb-1";
+
+    private static string Money(decimal value) => $"PHP {value:N2}";
+
+    private sealed class CartLine(ProductDto product)
+    {
+        public ProductDto Product { get; } = product;
+        public decimal Quantity { get; set; } = 1;
+        public decimal LineTotal => Product.Price * Quantity;
+    }
+}

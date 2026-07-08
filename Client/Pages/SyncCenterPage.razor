@@ -1,0 +1,129 @@
+@page "/sync"
+@inject ISyncService SyncService
+
+<div class="content-header px-0 pt-0">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-kicker">Cloud handoff</div>
+            <h1 class="page-title mb-0">Sync Center</h1>
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-primary" @onclick="UploadAsync" disabled="@isUploading">
+                <i class="fas fa-cloud-upload-alt mr-1"></i> Upload Data
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert @messageClass">@message</div>
+}
+
+@if (status is null)
+{
+    <div class="card">
+        <div class="card-body">
+            <i class="fas fa-circle-notch fa-spin mr-2"></i> Checking sync state...
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-label">Connection</div>
+                <div class="metric-value">@(status.IsOnline ? "Online" : "Offline")</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-label">Pending Uploads</div>
+                <div class="metric-value">@status.PendingUploads</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-label">Subscription</div>
+                <div class="metric-value">@status.SubscriptionStatus</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-label">Valid Until</div>
+                <div class="metric-value">@status.SubscriptionValidUntil.ToString("MMM d")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title mb-0">Local-First Sync Policy</h3>
+        </div>
+        <div class="card-body">
+            <p class="mb-3">@status.LastMessage</p>
+            <div class="timeline mb-0">
+                <div>
+                    <i class="fas fa-cash-register bg-primary"></i>
+                    <div class="timeline-item">
+                        <h3 class="timeline-header">Sales continue locally</h3>
+                        <div class="timeline-body">Cashiers can keep using the register even when internet is unavailable.</div>
+                    </div>
+                </div>
+                <div>
+                    <i class="fas fa-database bg-info"></i>
+                    <div class="timeline-item">
+                        <h3 class="timeline-header">SQLite keeps the source record</h3>
+                        <div class="timeline-body">Transactions, audit logs, inventory movements, and receipt series stay in the local database first.</div>
+                    </div>
+                </div>
+                <div>
+                    <i class="fas fa-cloud-upload-alt bg-accent"></i>
+                    <div class="timeline-item">
+                        <h3 class="timeline-header">Upload when online</h3>
+                        <div class="timeline-body">Manual upload is available now; automatic cloud sync can reuse this outbox pipeline later.</div>
+                    </div>
+                </div>
+                <div>
+                    <i class="fas fa-check bg-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private SyncStatusDto? status;
+    private bool isUploading;
+    private string? message;
+    private string messageClass = "alert-info";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        status = await SyncService.GetStatusAsync();
+    }
+
+    private async Task UploadAsync()
+    {
+        isUploading = true;
+        message = null;
+        try
+        {
+            var response = await SyncService.UploadAsync();
+            var result = await response.Content.ReadFromJsonAsync<SyncUploadResponse>();
+            messageClass = response.IsSuccessStatusCode ? "alert-success" : "alert-danger";
+            message = result?.Message ?? "Sync finished.";
+            await LoadAsync();
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+}

@@ -1,0 +1,201 @@
+@page "/products"
+@inject IProductService ProductService
+
+<div class="content-header px-0 pt-0">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-kicker">Catalog and inventory</div>
+            <h1 class="page-title mb-0">Products</h1>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert @messageClass">@message</div>
+}
+
+<div class="row">
+    <div class="col-lg-4 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">New Product</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>SKU / Barcode</label>
+                    <input class="form-control" @bind="newProduct.Sku" />
+                </div>
+                <div class="form-group">
+                    <label>Name</label>
+                    <input class="form-control" @bind="newProduct.Name" />
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select class="form-control" @bind="newProduct.CategoryId">
+                        @foreach (var category in categories)
+                        {
+                            <option value="@category.Id">@category.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label>Price</label>
+                        <input class="form-control" type="number" min="0" step="0.01" @bind="newProduct.Price" />
+                    </div>
+                    <div class="form-group col-6">
+                        <label>Stock</label>
+                        <input class="form-control" type="number" min="0" step="1" @bind="newProduct.QuantityOnHand" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label>Reorder Point</label>
+                        <input class="form-control" type="number" min="0" step="1" @bind="newProduct.ReorderPoint" />
+                    </div>
+                    <div class="form-group col-6">
+                        <label>Status</label>
+                        <select class="form-control" @bind="newProduct.IsActive">
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="vatExempt" @bind="newProduct.IsVatExempt" />
+                    <label class="custom-control-label" for="vatExempt">VAT exempt item</label>
+                </div>
+                <button class="btn btn-primary btn-block mt-4" type="button" @onclick="SaveProductAsync" disabled="@(!CanSave)">
+                    <i class="fas fa-plus mr-1"></i> Add Product
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8 mb-3">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <h3 class="card-title mb-0">Product List</h3>
+                <span class="badge badge-soft-success ml-auto">@products.Count item(s)</span>
+            </div>
+            <div class="card-body p-0">
+                @if (products.Count == 0)
+                {
+                    <div class="empty-state m-3">
+                        <i class="fas fa-box-open fa-2x mb-2"></i>
+                        <span>No products yet.</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th class="text-right">Price</th>
+                                    <th class="text-right">Stock</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var product in products)
+                                {
+                                    <tr>
+                                        <td class="font-weight-bold">@product.Sku</td>
+                                        <td>@product.Name</td>
+                                        <td>@product.CategoryName</td>
+                                        <td class="text-right">@Money(product.Price)</td>
+                                        <td class="text-right">
+                                            <span class="@StockBadge(product)">@product.QuantityOnHand.ToString("N0")</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(product.IsActive ? "badge-soft-success" : "badge-soft-danger")">
+                                                @(product.IsActive ? "Active" : "Inactive")
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ProductCategoryDto> categories = [];
+    private List<ProductDto> products = [];
+    private ProductForm newProduct = new();
+    private string? message;
+    private string messageClass = "alert-info";
+
+    private bool CanSave =>
+        !string.IsNullOrWhiteSpace(newProduct.Sku) &&
+        !string.IsNullOrWhiteSpace(newProduct.Name) &&
+        newProduct.CategoryId != Guid.Empty &&
+        newProduct.Price >= 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        categories = await ProductService.GetCategoriesAsync();
+        products = await ProductService.GetProductsAsync();
+        if (newProduct.CategoryId == Guid.Empty && categories.Count > 0)
+        {
+            newProduct.CategoryId = categories[0].Id;
+        }
+    }
+
+    private async Task SaveProductAsync()
+    {
+        var request = new UpsertProductRequest(
+            newProduct.Sku,
+            newProduct.Name,
+            newProduct.CategoryId,
+            newProduct.Price,
+            newProduct.QuantityOnHand,
+            newProduct.ReorderPoint,
+            newProduct.IsVatExempt,
+            newProduct.IsActive);
+
+        var response = await ProductService.AddAsync(request);
+        if (!response.IsSuccessStatusCode)
+        {
+            messageClass = "alert-danger";
+            message = await response.Content.ReadAsStringAsync();
+            return;
+        }
+
+        messageClass = "alert-success";
+        message = $"{newProduct.Name} was added.";
+        newProduct = new ProductForm { CategoryId = categories.FirstOrDefault()?.Id ?? Guid.Empty };
+        await LoadAsync();
+    }
+
+    private static string StockBadge(ProductDto product) =>
+        product.QuantityOnHand <= 10 ? "badge badge-soft-warning" : "badge badge-light";
+
+    private static string Money(decimal value) => $"PHP {value:N2}";
+
+    private sealed class ProductForm
+    {
+        public string Sku { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public Guid CategoryId { get; set; }
+        public decimal Price { get; set; }
+        public decimal QuantityOnHand { get; set; }
+        public decimal ReorderPoint { get; set; } = 5;
+        public bool IsVatExempt { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}
