@@ -1,0 +1,77 @@
+@page "/brands"
+@inject IProductService ProductService
+
+<div class="counter-page-header">
+    <div>
+        <h1>Brands</h1>
+        <p>Manage the brands carried in your catalog.</p>
+    </div>
+    <button type="button" class="btn btn-counter-primary">
+        <i class="fas fa-plus mr-2"></i>Add Brand
+    </button>
+</div>
+
+<div class="counter-search entity-search">
+    <i class="fas fa-search"></i>
+    <input @bind="search" @bind:event="oninput" placeholder="Search brands..." />
+</div>
+
+<section class="entity-card-grid brand-grid">
+    @foreach (var brand in FilteredBrands)
+    {
+        <article class="entity-card compact-entity-card">
+            <div class="entity-icon brand-icon">
+                <i class="far fa-check-circle"></i>
+            </div>
+            <h2>@brand.Name</h2>
+            <p><i class="fas fa-tag mr-1"></i>@brand.ProductCount product@(brand.ProductCount == 1 ? string.Empty : "s")</p>
+        </article>
+    }
+</section>
+
+@code {
+    private readonly List<BrandRow> brands =
+    [
+        new("Acme", 0),
+        new("Fresh Farm", 0),
+        new("Generic", 0)
+    ];
+
+    private string search = string.Empty;
+
+    private IEnumerable<BrandRow> FilteredBrands =>
+        brands.Where(brand =>
+            string.IsNullOrWhiteSpace(search) ||
+            brand.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var products = await ProductService.GetProductsAsync();
+        foreach (var brand in brands)
+        {
+            brand.ProductCount = products.Count(product => BrandForProduct(product) == brand.Name);
+        }
+    }
+
+    private static string BrandForProduct(ProductDto product)
+    {
+        if (product.Sku.StartsWith("COF-", StringComparison.OrdinalIgnoreCase) ||
+            product.Sku.StartsWith("PAS-", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Fresh Farm";
+        }
+
+        if (product.Sku.Contains("ELEC", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Acme";
+        }
+
+        return "Generic";
+    }
+
+    private sealed class BrandRow(string name, int productCount)
+    {
+        public string Name { get; } = name;
+        public int ProductCount { get; set; } = productCount;
+    }
+}

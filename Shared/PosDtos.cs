@@ -38,3 +38,14 @@ public sealed record CreateSaleResponse(
     decimal NetTotal,
     decimal ChangeDue,
     DateTime SoldAt);
+
+public sealed record SalesHistoryDto(
+    Guid Id,
+    string ReceiptNumber,
+    DateTime SoldAt,
+    string CustomerName,
+    string CashierName,
+    string Status,
+    decimal Total,
+    string OrderType,
+    int ItemCount);

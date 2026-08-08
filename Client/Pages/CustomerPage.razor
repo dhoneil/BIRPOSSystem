@@ -1,0 +1,14 @@
+@page "/customers"
+
+<ModulePlaceholderComponent
+    Kicker="Finance & Customers"
+    Title="Customers"
+    Icon="fas fa-users"
+    Workflow="CRM"
+    ListTitle="Customers"
+    EmptyText="No customers yet."
+    Columns="@columns" />
+
+@code {
+    private static readonly string[] columns = ["Customer", "Phone", "Email", "Last Purchase", "Balance", "Status"];
+}

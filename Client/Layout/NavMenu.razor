@@ -2,7 +2,7 @@
 
 @inject NavigationManager NavigationManager
 
-<aside class="main-sidebar sidebar-dark-primary elevation-2">
+<aside class="main-sidebar sidebar-light-primary counter-sidebar elevation-1">
     <a href="" class="brand-link">
         <span class="brand-badge">BP</span>
         <span class="brand-text font-weight-semibold">BIR POS System</span>
@@ -21,31 +21,115 @@
 
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column nav-child-indent" data-widget="treeview" role="menu">
-                <li class="nav-header">REGISTER</li>
+                <li class="nav-header">OVERVIEW</li>
                 <li class="nav-item">
                     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <i class="nav-icon fas fa-th-large"></i>
                         <p>Dashboard</p>
                     </NavLink>
                 </li>
+
+                <li class="nav-header">SALES</li>
                 <li class="nav-item">
                     <NavLink class="nav-link" href="pos">
-                        <i class="nav-icon fas fa-cash-register"></i>
-                        <p>POS Register</p>
+                        <i class="nav-icon fas fa-shopping-cart"></i>
+                        <p>Point of Sale</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="sales-history">
+                        <i class="nav-icon fas fa-list"></i>
+                        <p>Sales History</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="cash-movements">
+                        <i class="nav-icon fas fa-exchange-alt"></i>
+                        <p>Cash Movements</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="x-report">
+                        <i class="nav-icon fas fa-file-invoice"></i>
+                        <p>X Report</p>
                     </NavLink>
                 </li>
 
-                <li class="nav-header">BACK OFFICE</li>
+                <li class="nav-header">INVENTORY</li>
                 <li class="nav-item">
                     <NavLink class="nav-link" href="products">
-                        <i class="nav-icon fas fa-boxes"></i>
+                        <i class="nav-icon fas fa-cube"></i>
                         <p>Products</p>
                     </NavLink>
                 </li>
                 <li class="nav-item">
+                    <NavLink class="nav-link" href="categories">
+                        <i class="nav-icon fas fa-layer-group"></i>
+                        <p>Categories</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="brands">
+                        <i class="nav-icon fas fa-tags"></i>
+                        <p>Brands</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="suppliers">
+                        <i class="nav-icon fas fa-truck"></i>
+                        <p>Suppliers</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="inventory">
+                        <i class="nav-icon fas fa-warehouse"></i>
+                        <p>Inventory</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="adjustments">
+                        <i class="nav-icon fas fa-sliders-h"></i>
+                        <p>Adjustments</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="barcode-labels">
+                        <i class="nav-icon fas fa-barcode"></i>
+                        <p>Barcode Labels</p>
+                    </NavLink>
+                </li>
+
+                <li class="nav-header">FINANCE &amp; CUSTOMERS</li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="purchase-orders">
+                        <i class="nav-icon fas fa-clipboard-list"></i>
+                        <p>Purchase Orders</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="expenses">
+                        <i class="nav-icon fas fa-money-bill-wave"></i>
+                        <p>Expenses</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="customers">
+                        <i class="nav-icon fas fa-users"></i>
+                        <p>Customers</p>
+                    </NavLink>
+                </li>
+
+                <li class="nav-header">ADMIN</li>
+                <li class="nav-item">
                     <NavLink class="nav-link" href="reports">
                         <i class="nav-icon fas fa-file-invoice-dollar"></i>
                         <p>BIR Reports</p>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="settings">
+                        <i class="nav-icon fas fa-store"></i>
+                        <p>Store Setup</p>
                     </NavLink>
                 </li>
                 <li class="nav-item">
@@ -57,12 +141,10 @@
                         </p>
                     </NavLink>
                 </li>
-
-                <li class="nav-header">SYSTEM</li>
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="settings">
-                        <i class="nav-icon fas fa-store"></i>
-                        <p>Store Setup</p>
+                    <NavLink class="nav-link" href="user-management">
+                        <i class="nav-icon fas fa-user-shield"></i>
+                        <p>User Management</p>
                     </NavLink>
                 </li>
                 <AuthorizeView>

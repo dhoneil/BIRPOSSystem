@@ -1,0 +1,14 @@
+@page "/adjustments"
+
+<ModulePlaceholderComponent
+    Kicker="Inventory"
+    Title="Adjustments"
+    Icon="fas fa-sliders-h"
+    Workflow="Approval"
+    ListTitle="Stock Adjustments"
+    EmptyText="No stock adjustments yet."
+    Columns="@columns" />
+
+@code {
+    private static readonly string[] columns = ["Date", "SKU", "Product", "Quantity", "Reason", "User"];
+}

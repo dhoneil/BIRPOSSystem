@@ -18,6 +18,41 @@ namespace BIRPOSSystem.Controllers;
 [Route("api/sales")]
 public sealed class SaleController(ApplicationDbContext db) : ControllerBase
 {
+    [HttpGet("history")]
+    public async Task<IReadOnlyList<SalesHistoryDto>> GetHistoryAsync()
+    {
+        var sales = await db.SalesTransactions
+            .AsNoTracking()
+            .OrderByDescending(x => x.SoldAt)
+            .Take(100)
+            .Select(x => new
+            {
+                x.Id,
+                x.InvoiceNumber,
+                x.SoldAt,
+                x.CustomerName,
+                x.CashierName,
+                x.Status,
+                x.NetTotal,
+                x.OrderType,
+                ItemCount = x.Lines.Count
+            })
+            .ToListAsync();
+
+        return sales
+            .Select(x => new SalesHistoryDto(
+                x.Id,
+                x.InvoiceNumber,
+                x.SoldAt,
+                string.IsNullOrWhiteSpace(x.CustomerName) ? "Walk-in" : x.CustomerName,
+                x.CashierName,
+                x.Status.ToString(),
+                x.NetTotal,
+                x.OrderType,
+                x.ItemCount))
+            .ToList();
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateSaleAsync([FromBody] CreateSaleRequest request)
     {

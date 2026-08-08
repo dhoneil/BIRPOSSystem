@@ -1,176 +1,183 @@
 @page "/pos"
 @inject IPOSService POSService
-
-<div class="content-header px-0 pt-0">
-    <div class="row align-items-center">
-        <div class="col">
-            <div class="page-kicker">Retail and cafe-ready</div>
-            <h1 class="page-title mb-0">POS Register</h1>
-        </div>
-        <div class="col-auto text-right">
-            @if (catalog?.RegisterState is not null)
-            {
-                <div class="text-muted small">@catalog.RegisterState.BranchName / @catalog.RegisterState.TerminalCode</div>
-                <div class="font-weight-bold">@catalog.RegisterState.NextInvoiceNumber</div>
-            }
-        </div>
-    </div>
-</div>
+@inject NavigationManager NavigationManager
 
 @if (!string.IsNullOrWhiteSpace(message))
 {
-    <div class="alert @messageClass alert-dismissible">
-        <button type="button" class="close" @onclick="() => message = null">&times;</button>
-        @message
-    </div>
+    <div class="alert @messageClass counter-alert">@message</div>
 }
 
 @if (catalog is null)
 {
-    <div class="card">
-        <div class="card-body">
-            <i class="fas fa-circle-notch fa-spin mr-2"></i> Loading register...
-        </div>
+    <div class="counter-loading">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <span>Loading register...</span>
     </div>
 }
 else
 {
-    <div class="pos-grid">
-        <div>
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div class="row align-items-end">
-                        <div class="col-lg-7 mb-2 mb-lg-0">
-                            <label class="small text-muted mb-1">Search or barcode</label>
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text"><i class="fas fa-barcode"></i></span>
-                                </div>
-                                <input class="form-control form-control-lg" @bind="search" @bind:event="oninput" placeholder="SKU, barcode, or item name" />
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <label class="small text-muted mb-1">Category</label>
-                            <div class="btn-group btn-group-toggle d-flex flex-wrap">
-                                <button class="@CategoryButtonClass(null)" @onclick="() => selectedCategoryId = null">All</button>
-                                @foreach (var category in catalog.Categories)
-                                {
-                                    <button class="@CategoryButtonClass(category.Id)" @onclick="() => selectedCategoryId = category.Id">@category.Name</button>
-                                }
-                            </div>
-                        </div>
-                    </div>
+    <div class="pos-workspace">
+        <section class="pos-catalog-panel">
+            <div class="drawer-alert @(IsShiftOpen ? "drawer-alert-open" : null)">
+                <div class="drawer-alert-icon">
+                    <i class="fas @(IsShiftOpen ? "fa-lock-open" : "fa-lock")"></i>
                 </div>
+                <div>
+                    <strong>@(IsShiftOpen ? "Shift is open" : "No shift started")</strong>
+                    <span>@(IsShiftOpen ? $"{catalog.RegisterState.CashierName} is assigned to {catalog.RegisterState.TerminalCode}." : "Open your cash drawer with a starting float before taking sales.")</span>
+                </div>
+                <button type="button" class="btn btn-counter-primary ml-auto" @onclick="NavigateToCashMovements">
+                    <i class="fas fa-cash-register mr-2"></i>@(IsShiftOpen ? "Cash Movements" : "Open Drawer")
+                </button>
             </div>
 
-            <div class="product-grid">
-                @foreach (var product in FilteredProducts)
+            <div class="pos-search-row">
+                <div class="counter-search flex-grow-1">
+                    <i class="fas fa-search"></i>
+                    <input @bind="search" @bind:event="oninput" placeholder="Search name / SKU / barcode... (F2, Enter)" />
+                    <i class="fas fa-barcode search-action"></i>
+                </div>
+
+                <select class="counter-select" @bind="selectedCategoryName">
+                    <option value="@AllCategories">All Categories</option>
+                    @foreach (var category in catalog.Categories)
+                    {
+                        <option value="@category.Name">@category.Name</option>
+                    }
+                </select>
+
+                <button type="button" class="btn btn-counter-light icon-button" title="Scan barcode">
+                    <i class="fas fa-keyboard"></i>
+                </button>
+            </div>
+
+            <div class="counter-tabs">
+                @foreach (var tab in tabs)
                 {
-                    <button type="button" class="product-tile" @onclick="() => AddToCart(product)">
-                        <span class="product-tile-name">@product.Name</span>
-                        <span class="product-tile-meta">@product.Sku / @product.CategoryName</span>
-                        <span class="product-tile-meta">Stock: @product.QuantityOnHand.ToString("N0")</span>
-                        <span class="product-tile-price">@Money(product.Price)</span>
+                    <button type="button" class="@(activeTab == tab.Key ? "active" : null)" @onclick="() => activeTab = tab.Key">
+                        <i class="@tab.Icon"></i>
+                        <span>@tab.Label</span>
                     </button>
                 }
             </div>
-        </div>
 
-        <div class="cart-panel">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex align-items-center">
-                        <h3 class="card-title mb-0">Current Sale</h3>
-                        <button type="button" class="btn btn-sm btn-outline-danger ml-auto" @onclick="ClearCart" disabled="@(!cart.Any())">
-                            <i class="fas fa-trash"></i>
-                        </button>
+            <div class="counter-product-grid">
+                @foreach (var product in FilteredProducts)
+                {
+                    <button type="button" class="counter-product-card" @onclick="() => AddToCart(product)">
+                        <div class="product-image-placeholder">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="product-card-body">
+                            <div class="product-card-name">@product.Name</div>
+                            <div class="product-card-sku">@product.Sku</div>
+                            <div class="product-card-footer">
+                                <strong>@Money(product.Price)</strong>
+                                <span class="@StockPillClass(product)">@product.QuantityOnHand.ToString("N0")</span>
+                            </div>
+                        </div>
+                    </button>
+                }
+            </div>
+        </section>
+
+        <aside class="pos-cart-panel">
+            <div class="cart-panel-header">
+                <h2><i class="fas fa-shopping-cart mr-2"></i>Current Sale</h2>
+            </div>
+
+            <select class="counter-select w-100 mb-3" @bind="customerName">
+                <option value="">Walk-in Customer</option>
+                <option value="Regular Customer">Regular Customer</option>
+                <option value="Wholesale Account">Wholesale Account</option>
+            </select>
+
+            <div class="cart-lines">
+                @if (!cart.Any())
+                {
+                    <div class="empty-cart-state">
+                        <i class="fas fa-shopping-cart"></i>
+                        <strong>Cart is empty</strong>
+                        <span>Click a product or scan a barcode.</span>
                     </div>
-                </div>
-                <div class="card-body">
-                    @if (!cart.Any())
+                }
+                else
+                {
+                    @foreach (var line in cart)
                     {
-                        <div class="empty-state">
-                            <i class="fas fa-shopping-basket fa-2x mb-2"></i>
-                            <span>Add products to start a sale.</span>
+                        <div class="counter-cart-line">
+                            <div>
+                                <strong>@line.Product.Name</strong>
+                                <span>@Money(line.Product.Price) each</span>
+                            </div>
+                            <div class="cart-line-total">@Money(line.LineTotal)</div>
+                            <div class="quantity-stepper">
+                                <button type="button" @onclick="() => ChangeQuantity(line, -1)">-</button>
+                                <span>@line.Quantity.ToString("N0")</span>
+                                <button type="button" @onclick="() => ChangeQuantity(line, 1)">+</button>
+                            </div>
                         </div>
                     }
-                    else
-                    {
-                        @foreach (var line in cart)
-                        {
-                            <div class="cart-line">
-                                <div class="d-flex">
-                                    <div class="cart-line-name">@line.Product.Name</div>
-                                    <div class="ml-auto font-weight-bold">@Money(line.LineTotal)</div>
-                                </div>
-                                <div class="d-flex align-items-center mt-2">
-                                    <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-secondary" @onclick="() => ChangeQuantity(line, -1)">-</button>
-                                        <button class="btn btn-light disabled">@line.Quantity</button>
-                                        <button class="btn btn-outline-secondary" @onclick="() => ChangeQuantity(line, 1)">+</button>
-                                    </div>
-                                    <span class="text-muted small ml-2">@Money(line.Product.Price) each</span>
-                                </div>
-                            </div>
-                        }
-                    }
+                }
+            </div>
 
-                    <div class="form-group mt-3">
-                        <label>Order Type</label>
-                        <select class="form-control" @bind="orderType">
-                            <option>Retail</option>
-                            <option>Takeout</option>
-                            <option>Dine-in</option>
-                            <option>Delivery</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Customer / Queue Name</label>
-                        <input class="form-control" @bind="customerName" placeholder="Optional" />
-                    </div>
-                    <div class="form-group">
-                        <label>Manual Discount</label>
-                        <input class="form-control" type="number" min="0" step="0.01" @bind="manualDiscount" />
-                    </div>
-                    <div class="form-group">
-                        <label>Payment Method</label>
-                        <select class="form-control" @bind="paymentMethod">
-                            <option>Cash</option>
-                            <option>Card</option>
-                            <option>E-Wallet</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Amount Tendered</label>
-                        <input class="form-control form-control-lg" type="number" min="0" step="0.01" @bind="amountTendered" />
-                    </div>
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span>Subtotal (@cart.Count item@(cart.Count == 1 ? string.Empty : "s"))</span>
+                    <strong>@Money(Subtotal)</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Tax</span>
+                    <strong>@Money(TaxEstimate)</strong>
+                </div>
+                <div class="discount-row">
+                    <span>%</span>
+                    <input type="number" min="0" step="0.01" @bind="manualDiscount" placeholder="Order discount" />
+                </div>
 
-                    <div class="d-flex justify-content-between text-muted">
-                        <span>Subtotal</span>
-                        <span>@Money(Subtotal)</span>
+                @if (cart.Any())
+                {
+                    <div class="discount-row">
+                        <span><i class="fas fa-money-bill-wave"></i></span>
+                        <input type="number" min="0" step="0.01" @bind="amountTendered" placeholder="Amount tendered" />
                     </div>
-                    <div class="d-flex justify-content-between text-muted">
-                        <span>Discount</span>
-                        <span>@Money(manualDiscount)</span>
-                    </div>
-                    <hr />
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="font-weight-bold">Total</span>
-                        <span class="cart-total">@Money(NetTotal)</span>
-                    </div>
-                    <button type="button" class="btn btn-accent btn-lg btn-block mt-3" @onclick="CheckoutAsync" disabled="@(!CanCheckout)">
-                        <i class="fas fa-check-circle mr-1"></i> Complete Sale
+                }
+
+                <div class="total-row">
+                    <span>Total</span>
+                    <strong>@Money(NetTotal)</strong>
+                </div>
+
+                <div class="cart-actions">
+                    <button type="button" class="btn btn-counter-light" disabled="@(!cart.Any())">
+                        <i class="far fa-pause-circle mr-2"></i>Hold
+                    </button>
+                    <button type="button" class="btn btn-counter-primary" @onclick="CheckoutAsync" disabled="@(!CanCheckout)">
+                        <i class="far fa-credit-card mr-2"></i>Pay
                     </button>
                 </div>
+                <button type="button" class="park-button" disabled="@(!cart.Any())">
+                    <i class="far fa-clock mr-2"></i>Park Transaction
+                </button>
             </div>
-        </div>
+        </aside>
     </div>
 }
 
 @code {
+    private const string AllCategories = "All Categories";
+
+    private readonly (string Key, string Label, string Icon)[] tabs =
+    [
+        ("All", "All", "fas fa-th"),
+        ("Favorites", "Favorites", "far fa-star"),
+        ("Recent", "Recent", "far fa-clock")
+    ];
+
     private PosCatalogDto? catalog;
     private readonly List<CartLine> cart = [];
-    private Guid? selectedCategoryId;
+    private string selectedCategoryName = AllCategories;
+    private string activeTab = "All";
     private string search = string.Empty;
     private string orderType = "Retail";
     private string? customerName;
@@ -180,20 +187,50 @@ else
     private string? message;
     private string messageClass = "alert-info";
 
-    private IEnumerable<ProductDto> FilteredProducts =>
-        catalog?.Products.Where(product =>
-            (SelectedCategoryName is null || SelectedCategoryName == product.CategoryName) &&
-            (string.IsNullOrWhiteSpace(search) ||
-             product.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-             product.Sku.Contains(search, StringComparison.OrdinalIgnoreCase))) ?? [];
+    private bool IsShiftOpen =>
+        catalog?.RegisterState.CashierName is { Length: > 0 } cashier &&
+        !cashier.Equals("No open shift", StringComparison.OrdinalIgnoreCase);
 
-    private string? SelectedCategoryName =>
-        selectedCategoryId is null
-            ? null
-            : catalog?.Categories.FirstOrDefault(c => c.Id == selectedCategoryId.Value)?.Name;
+    private IEnumerable<ProductDto> FilteredProducts
+    {
+        get
+        {
+            var products = catalog?.Products.AsEnumerable() ?? [];
+
+            if (selectedCategoryName != AllCategories)
+            {
+                products = products.Where(product => product.CategoryName == selectedCategoryName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                products = products.Where(product =>
+                    product.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    product.Sku.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    product.Barcode.Contains(search, StringComparison.OrdinalIgnoreCase));
+            }
+
+            products = activeTab switch
+            {
+                "Favorites" => products.Where(IsFavoriteProduct),
+                "Recent" => products.Reverse().Take(8),
+                _ => products
+            };
+
+            return products;
+        }
+    }
 
     private decimal Subtotal => cart.Sum(line => line.LineTotal);
     private decimal NetTotal => Math.Max(0, Subtotal - manualDiscount);
+    private decimal TaxEstimate
+    {
+        get
+        {
+            var rate = catalog?.RegisterState.VatRate ?? 0.12m;
+            return NetTotal <= 0 ? 0 : Math.Round(NetTotal * rate / (1 + rate), 2);
+        }
+    }
     private bool CanCheckout => cart.Any() && amountTendered >= NetTotal && NetTotal > 0;
 
     protected override async Task OnInitializedAsync()
@@ -267,12 +304,21 @@ else
         await LoadCatalogAsync();
     }
 
-    private string CategoryButtonClass(Guid? categoryId) =>
-        selectedCategoryId == categoryId
-            ? "btn btn-primary btn-sm mr-1 mb-1"
-            : "btn btn-outline-secondary btn-sm mr-1 mb-1";
-
     private static string Money(decimal value) => $"PHP {value:N2}";
+
+    private static string StockPillClass(ProductDto product) =>
+        product.QuantityOnHand <= product.ReorderPoint ? "stock-pill stock-low" : "stock-pill";
+
+    private void NavigateToCashMovements()
+    {
+        NavigationManager.NavigateTo("cash-movements");
+    }
+
+    private static bool IsFavoriteProduct(ProductDto product) =>
+        product.Sku.StartsWith("COF-", StringComparison.OrdinalIgnoreCase) ||
+        product.Sku.StartsWith("PAS-", StringComparison.OrdinalIgnoreCase) ||
+        product.CategoryName.Contains("Coffee", StringComparison.OrdinalIgnoreCase) ||
+        product.CategoryName.Contains("Pastries", StringComparison.OrdinalIgnoreCase);
 
     private sealed class CartLine(ProductDto product)
     {

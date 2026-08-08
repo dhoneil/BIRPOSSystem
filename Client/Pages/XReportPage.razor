@@ -1,0 +1,32 @@
+@page "/x-report"
+@inject NavigationManager NavigationManager
+
+<section class="centered-empty-page">
+    <div class="report-empty-state">
+        <div class="report-empty-icon">
+            <i class="fas fa-exclamation"></i>
+        </div>
+        <h1>No Active Shift</h1>
+        <p>You need an open cash drawer session to generate an X Report.</p>
+        <div class="report-empty-actions">
+            <button type="button" class="btn btn-counter-light" @onclick="GoToCashMovements">
+                <i class="fas fa-arrow-left mr-2"></i>Cash Movements
+            </button>
+            <button type="button" class="btn btn-counter-light" @onclick="Refresh">
+                <i class="fas fa-sync-alt mr-2"></i>Retry
+            </button>
+        </div>
+    </div>
+</section>
+
+@code {
+    private void GoToCashMovements()
+    {
+        NavigationManager.NavigateTo("cash-movements");
+    }
+
+    private void Refresh()
+    {
+        NavigationManager.Refresh();
+    }
+}

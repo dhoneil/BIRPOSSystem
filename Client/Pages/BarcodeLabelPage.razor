@@ -1,0 +1,14 @@
+@page "/barcode-labels"
+
+<ModulePlaceholderComponent
+    Kicker="Inventory"
+    Title="Barcode Labels"
+    Icon="fas fa-barcode"
+    Workflow="Print"
+    ListTitle="Label Batches"
+    EmptyText="No barcode label batches yet."
+    Columns="@columns" />
+
+@code {
+    private static readonly string[] columns = ["Batch", "Created", "Products", "Labels", "Status"];
+}

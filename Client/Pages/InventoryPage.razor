@@ -1,0 +1,14 @@
+@page "/inventory"
+
+<ModulePlaceholderComponent
+    Kicker="Inventory"
+    Title="Inventory"
+    Icon="fas fa-warehouse"
+    Workflow="Stock"
+    ListTitle="Stock Levels"
+    EmptyText="No inventory records yet."
+    Columns="@columns" />
+
+@code {
+    private static readonly string[] columns = ["SKU", "Product", "On Hand", "Reorder Point", "Cost", "Status"];
+}

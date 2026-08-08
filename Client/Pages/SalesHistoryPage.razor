@@ -1,0 +1,112 @@
+@page "/sales-history"
+@inject ISalesService SalesService
+
+<div class="counter-page-header">
+    <div>
+        <h1>Sales History</h1>
+        <p>Review past transactions, resume held orders, or process refunds.</p>
+    </div>
+</div>
+
+<section class="counter-filter-panel sales-history-filters">
+    <div class="counter-search history-search">
+        <i class="fas fa-search"></i>
+        <input @bind="search" @bind:event="oninput" placeholder="Search receipt, customer, or items..." />
+    </div>
+    <select class="counter-select" @bind="selectedStatus">
+        <option>All Statuses</option>
+        <option>Completed</option>
+        <option>Voided</option>
+        <option>Refunded</option>
+    </select>
+    <div class="date-range">
+        <i class="far fa-calendar"></i>
+        <input type="date" @bind="fromDate" />
+        <span>-</span>
+        <input type="date" @bind="toDate" />
+    </div>
+    <div class="history-summary ml-auto">
+        <span>Count: <strong>@FilteredSales.Count()</strong></span>
+        <span>Total: <strong>@Money(FilteredSales.Sum(x => x.Total))</strong></span>
+    </div>
+</section>
+
+<section class="counter-table-card">
+    @if (sales is null)
+    {
+        <div class="counter-loading compact">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Loading sales...</span>
+        </div>
+    }
+    else if (!FilteredSales.Any())
+    {
+        <div class="empty-state m-3">
+            <i class="fas fa-receipt fa-2x mb-2"></i>
+            <span>No matching sales.</span>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table counter-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Receipt</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Cashier</th>
+                        <th>Status</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var sale in FilteredSales)
+                    {
+                        <tr>
+                            <td class="sku-cell">@sale.ReceiptNumber</td>
+                            <td>@sale.SoldAt.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</td>
+                            <td><em>@sale.CustomerName</em></td>
+                            <td>@sale.CashierName</td>
+                            <td><span class="status-pill @StatusClass(sale.Status)">@sale.Status</span></td>
+                            <td class="text-right font-weight-bold">@Money(sale.Total)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private List<SalesHistoryDto>? sales;
+    private string search = string.Empty;
+    private string selectedStatus = "All Statuses";
+    private DateTime? fromDate;
+    private DateTime? toDate;
+
+    private IEnumerable<SalesHistoryDto> FilteredSales =>
+        (sales ?? []).Where(sale =>
+            (string.IsNullOrWhiteSpace(search) ||
+             sale.ReceiptNumber.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+             sale.CustomerName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+             sale.OrderType.Contains(search, StringComparison.OrdinalIgnoreCase)) &&
+            (selectedStatus == "All Statuses" || sale.Status == selectedStatus) &&
+            (fromDate is null || sale.SoldAt.ToLocalTime().Date >= fromDate.Value.Date) &&
+            (toDate is null || sale.SoldAt.ToLocalTime().Date <= toDate.Value.Date));
+
+    protected override async Task OnInitializedAsync()
+    {
+        sales = await SalesService.GetHistoryAsync();
+    }
+
+    private static string StatusClass(string status) =>
+        status switch
+        {
+            "Completed" => "status-active",
+            "Refunded" => "status-warning",
+            _ => "status-inactive"
+        };
+
+    private static string Money(decimal value) => $"PHP {value:N2}";
+}

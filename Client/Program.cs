@@ -7,6 +7,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IPOSService, POSService>();
+builder.Services.AddScoped<ISalesService, SalesService>();
 builder.Services.AddScoped<IBIRReportService, BIRReportService>();
 builder.Services.AddScoped<ISyncService, SyncService>();
 builder.Services.AddAuthorizationCore();

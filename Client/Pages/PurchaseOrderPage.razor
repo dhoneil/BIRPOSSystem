@@ -1,0 +1,14 @@
+@page "/purchase-orders"
+
+<ModulePlaceholderComponent
+    Kicker="Finance & Customers"
+    Title="Purchase Orders"
+    Icon="fas fa-clipboard-list"
+    Workflow="Procurement"
+    ListTitle="Purchase Orders"
+    EmptyText="No purchase orders yet."
+    Columns="@columns" />
+
+@code {
+    private static readonly string[] columns = ["PO Number", "Supplier", "Date", "Expected", "Total", "Status"];
+}

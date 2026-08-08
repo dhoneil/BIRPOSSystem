@@ -1,0 +1,54 @@
+@page "/categories"
+@inject IProductService ProductService
+
+<div class="counter-page-header">
+    <div>
+        <h1>Categories</h1>
+        <p>Organize your product catalog into categories.</p>
+    </div>
+    <button type="button" class="btn btn-counter-primary">
+        <i class="fas fa-plus mr-2"></i>Add Category
+    </button>
+</div>
+
+<div class="counter-search entity-search">
+    <i class="fas fa-search"></i>
+    <input @bind="search" @bind:event="oninput" placeholder="Search categories..." />
+</div>
+
+<section class="entity-card-grid">
+    @foreach (var category in FilteredCategories)
+    {
+        <article class="entity-card">
+            <div class="entity-card-actions">
+                <button type="button" title="Edit"><i class="far fa-edit"></i></button>
+                <button type="button" title="Delete"><i class="far fa-trash-alt"></i></button>
+            </div>
+            <div class="entity-icon category-icon">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <h2>@category.Name</h2>
+            <p>@ProductCount(category.Name) product@(ProductCount(category.Name) == 1 ? string.Empty : "s")</p>
+        </article>
+    }
+</section>
+
+@code {
+    private List<ProductCategoryDto> categories = [];
+    private List<ProductDto> products = [];
+    private string search = string.Empty;
+
+    private IEnumerable<ProductCategoryDto> FilteredCategories =>
+        categories.Where(category =>
+            string.IsNullOrWhiteSpace(search) ||
+            category.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await ProductService.GetCategoriesAsync();
+        products = await ProductService.GetProductsAsync();
+    }
+
+    private int ProductCount(string categoryName) =>
+        products.Count(product => product.CategoryName == categoryName);
+}

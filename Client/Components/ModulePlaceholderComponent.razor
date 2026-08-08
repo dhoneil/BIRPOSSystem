@@ -1,0 +1,83 @@
+<div class="content-header px-0 pt-0">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-kicker">@Kicker</div>
+            <h1 class="page-title mb-0">@Title</h1>
+        </div>
+        <div class="col-auto">
+            <span class="badge badge-soft-warning">@Status</span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="metric-card d-flex justify-content-between">
+            <div>
+                <div class="metric-label">Total Records</div>
+                <div class="metric-value">0</div>
+            </div>
+            <div class="metric-icon"><i class="@Icon"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="metric-card d-flex justify-content-between">
+            <div>
+                <div class="metric-label">This Month</div>
+                <div class="metric-value">0</div>
+            </div>
+            <div class="metric-icon"><i class="fas fa-calendar-alt"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-12 mb-3">
+        <div class="metric-card d-flex justify-content-between">
+            <div>
+                <div class="metric-label">Workflow</div>
+                <div class="metric-value">@Workflow</div>
+            </div>
+            <div class="metric-icon"><i class="fas fa-stream"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex align-items-center">
+        <h3 class="card-title mb-0">@ListTitle</h3>
+        <span class="badge badge-soft-success ml-auto">@Columns.Length column(s)</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        @foreach (var column in Columns)
+                        {
+                            <th>@column</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="@Columns.Length">
+                            <div class="empty-state m-3">
+                                <i class="@Icon fa-2x mb-2"></i>
+                                <span>@EmptyText</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Kicker { get; set; } = "Module";
+    [Parameter] public string Title { get; set; } = "Workspace";
+    [Parameter] public string Icon { get; set; } = "fas fa-table";
+    [Parameter] public string Status { get; set; } = "Ready for build-out";
+    [Parameter] public string Workflow { get; set; } = "Draft";
+    [Parameter] public string ListTitle { get; set; } = "Records";
+    [Parameter] public string EmptyText { get; set; } = "No records yet.";
+    [Parameter] public string[] Columns { get; set; } = ["Name", "Status"];
+}

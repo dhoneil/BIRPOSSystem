@@ -1,142 +1,290 @@
 @page "/products"
 @inject IProductService ProductService
 
-<div class="content-header px-0 pt-0">
-    <div class="row align-items-center">
-        <div class="col">
-            <div class="page-kicker">Catalog and inventory</div>
-            <h1 class="page-title mb-0">Products</h1>
-        </div>
+<div class="counter-page-header">
+    <div>
+        <h1>Products</h1>
+        <p>Manage your product catalog, pricing, and stock levels. <strong>@products.Count</strong> total.</p>
     </div>
+    <button type="button" class="btn btn-counter-primary" @onclick="OpenProductModal">
+        <i class="fas fa-plus mr-2"></i>Add Product
+    </button>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(message))
 {
-    <div class="alert @messageClass">@message</div>
+    <div class="alert @messageClass counter-alert">@message</div>
 }
 
-<div class="row">
-    <div class="col-lg-4 mb-3">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title mb-0">New Product</h3>
+<section class="counter-filter-panel">
+    <div class="counter-search product-search">
+        <i class="fas fa-search"></i>
+        <input @bind="search" @bind:event="oninput" placeholder="Name, SKU, barcode..." />
+    </div>
+    <select class="counter-select" @bind="selectedCategory">
+        <option value="@AllCategories">All categories</option>
+        @foreach (var category in categories)
+        {
+            <option value="@category.Name">@category.Name</option>
+        }
+    </select>
+    <select class="counter-select" @bind="selectedBrand">
+        @foreach (var brand in brandFilters)
+        {
+            <option value="@brand">@brand</option>
+        }
+    </select>
+    <select class="counter-select" @bind="selectedSupplier">
+        @foreach (var supplier in supplierFilters)
+        {
+            <option value="@supplier">@supplier</option>
+        }
+    </select>
+    <select class="counter-select" @bind="selectedStatus">
+        <option>Active</option>
+        <option>Inactive</option>
+        <option>All statuses</option>
+    </select>
+    <button type="button" class="btn btn-counter-light">
+        <i class="fas fa-filter mr-2"></i>More
+    </button>
+    <button type="button" class="btn btn-counter-light ml-auto">
+        <i class="far fa-bookmark mr-2"></i>Save filter
+    </button>
+</section>
+
+<section class="counter-table-card">
+    @if (products.Count == 0)
+    {
+        <div class="empty-state m-3">
+            <i class="fas fa-box-open fa-2x mb-2"></i>
+            <span>No products yet.</span>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table counter-table mb-0">
+                <thead>
+                    <tr>
+                        <th class="select-col"><input type="checkbox" aria-label="Select all products" /></th>
+                        <th>SKU</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Brand</th>
+                        <th class="text-right">Cost</th>
+                        <th class="text-right">Price</th>
+                        <th class="text-right">Stock</th>
+                        <th>Status</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in FilteredProducts)
+                    {
+                        <tr>
+                            <td class="select-col"><input type="checkbox" aria-label="Select @product.Name" /></td>
+                            <td class="sku-cell">@product.Sku</td>
+                            <td>
+                                <div class="product-name-cell">
+                                    <span class="mini-image"><i class="far fa-image"></i></span>
+                                    <span>@product.Name</span>
+                                </div>
+                            </td>
+                            <td>@product.CategoryName</td>
+                            <td>@BrandForProduct(product)</td>
+                            <td class="text-right">@Money(product.Cost)</td>
+                            <td class="text-right font-weight-semibold">@Money(product.Price)</td>
+                            <td class="text-right">
+                                <span class="@StockTextClass(product)">
+                                    @if (product.QuantityOnHand <= product.ReorderPoint)
+                                    {
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    }
+                                    @product.QuantityOnHand.ToString("N0")
+                                </span>
+                            </td>
+                            <td><span class="status-pill @(product.IsActive ? "status-active" : "status-inactive")">@(product.IsActive ? "Active" : "Inactive")</span></td>
+                            <td class="text-right table-actions">
+                                <button type="button" title="Edit"><i class="far fa-edit"></i></button>
+                                <button type="button" title="Duplicate"><i class="far fa-copy"></i></button>
+                                <button type="button" title="More"><i class="fas fa-ellipsis-h"></i></button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<div class="counter-pagination">
+    <span>1-@FilteredProducts.Count() of @FilteredProducts.Count()</span>
+    <select class="counter-select small-select">
+        <option>50 / page</option>
+        <option>100 / page</option>
+    </select>
+    <div class="ml-auto">
+        <button type="button" class="page-button" disabled><i class="fas fa-chevron-left"></i></button>
+        <span class="page-indicator">Page 1 of 1</span>
+        <button type="button" class="page-button" disabled><i class="fas fa-chevron-right"></i></button>
+    </div>
+</div>
+
+@if (showProductModal)
+{
+    <div class="counter-modal-backdrop">
+        <div class="counter-modal product-modal" @onclick:stopPropagation="true">
+            <div class="counter-modal-header">
+                <h2>New Product</h2>
+                <button type="button" class="icon-only-button" @onclick="CloseProductModal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="card-body">
-                <div class="form-group">
-                    <label>SKU / Barcode</label>
-                    <input class="form-control" @bind="newProduct.Sku" />
+
+            <div class="form-grid two-columns">
+                <label>
+                    <span>Name <em>*</em></span>
+                    <input class="form-control" @bind="newProduct.Name" placeholder="Product name" />
+                </label>
+                <label>
+                    <span>SKU <small>(auto-generated if blank)</small></span>
+                    <input class="form-control" @bind="newProduct.Sku" placeholder="e.g. PROD-001" />
+                </label>
+            </div>
+
+            <div class="form-grid barcode-row">
+                <label>
+                    <span>Barcode</span>
+                    <input class="form-control" @bind="newProduct.Barcode" placeholder="Scan or type barcode" />
+                </label>
+                <button type="button" class="btn btn-counter-light icon-button mt-auto" title="Scan barcode">
+                    <i class="fas fa-magic"></i>
+                </button>
+            </div>
+
+            <label class="image-upload-box">
+                <span>Product Image</span>
+                <div>
+                    <span class="image-drop-preview"><i class="far fa-image"></i></span>
+                    <input class="form-control" @bind="newProduct.ImageUrl" placeholder="https://..." />
+                    <button type="button" class="btn btn-counter-light">
+                        <i class="far fa-image mr-2"></i>Upload
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label>Name</label>
-                    <input class="form-control" @bind="newProduct.Name" />
-                </div>
-                <div class="form-group">
-                    <label>Category</label>
+            </label>
+
+            <label>
+                <span>Description</span>
+                <textarea class="form-control" rows="3" @bind="newProduct.Description" placeholder="Optional product description..."></textarea>
+            </label>
+
+            <div class="form-grid three-columns">
+                <label>
+                    <span>Category</span>
                     <select class="form-control" @bind="newProduct.CategoryId">
                         @foreach (var category in categories)
                         {
                             <option value="@category.Id">@category.Name</option>
                         }
                     </select>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-6">
-                        <label>Price</label>
-                        <input class="form-control" type="number" min="0" step="0.01" @bind="newProduct.Price" />
-                    </div>
-                    <div class="form-group col-6">
-                        <label>Stock</label>
-                        <input class="form-control" type="number" min="0" step="1" @bind="newProduct.QuantityOnHand" />
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-6">
-                        <label>Reorder Point</label>
-                        <input class="form-control" type="number" min="0" step="1" @bind="newProduct.ReorderPoint" />
-                    </div>
-                    <div class="form-group col-6">
-                        <label>Status</label>
-                        <select class="form-control" @bind="newProduct.IsActive">
-                            <option value="true">Active</option>
-                            <option value="false">Inactive</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input" id="vatExempt" @bind="newProduct.IsVatExempt" />
-                    <label class="custom-control-label" for="vatExempt">VAT exempt item</label>
-                </div>
-                <button class="btn btn-primary btn-block mt-4" type="button" @onclick="SaveProductAsync" disabled="@(!CanSave)">
-                    <i class="fas fa-plus mr-1"></i> Add Product
-                </button>
+                </label>
+                <label>
+                    <span>Brand</span>
+                    <select class="form-control" @bind="newProduct.Brand">
+                        @foreach (var brand in productBrands)
+                        {
+                            <option value="@brand">@brand</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    <span>Supplier</span>
+                    <select class="form-control" @bind="newProduct.Supplier">
+                        @foreach (var supplier in productSuppliers)
+                        {
+                            <option value="@supplier">@supplier</option>
+                        }
+                    </select>
+                </label>
             </div>
-        </div>
-    </div>
 
-    <div class="col-lg-8 mb-3">
-        <div class="card">
-            <div class="card-header d-flex align-items-center">
-                <h3 class="card-title mb-0">Product List</h3>
-                <span class="badge badge-soft-success ml-auto">@products.Count item(s)</span>
+            <div class="form-grid three-columns">
+                <label>
+                    <span>Cost Price</span>
+                    <input class="form-control" type="number" min="0" step="0.01" @bind="newProduct.Cost" />
+                </label>
+                <label>
+                    <span>Selling Price <em>*</em></span>
+                    <input class="form-control" type="number" min="0" step="0.01" @bind="newProduct.Price" />
+                </label>
+                <label>
+                    <span>Tax Rate</span>
+                    <input class="form-control" type="number" min="0" step="0.01" @bind="newProduct.TaxRate" />
+                </label>
             </div>
-            <div class="card-body p-0">
-                @if (products.Count == 0)
-                {
-                    <div class="empty-state m-3">
-                        <i class="fas fa-box-open fa-2x mb-2"></i>
-                        <span>No products yet.</span>
-                    </div>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>SKU</th>
-                                    <th>Product</th>
-                                    <th>Category</th>
-                                    <th class="text-right">Price</th>
-                                    <th class="text-right">Stock</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var product in products)
-                                {
-                                    <tr>
-                                        <td class="font-weight-bold">@product.Sku</td>
-                                        <td>@product.Name</td>
-                                        <td>@product.CategoryName</td>
-                                        <td class="text-right">@Money(product.Price)</td>
-                                        <td class="text-right">
-                                            <span class="@StockBadge(product)">@product.QuantityOnHand.ToString("N0")</span>
-                                        </td>
-                                        <td>
-                                            <span class="badge @(product.IsActive ? "badge-soft-success" : "badge-soft-danger")">
-                                                @(product.IsActive ? "Active" : "Inactive")
-                                            </span>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
+
+            <div class="form-grid two-columns">
+                <label>
+                    <span>Stock Quantity</span>
+                    <input class="form-control" type="number" min="0" step="1" @bind="newProduct.QuantityOnHand" />
+                </label>
+                <label>
+                    <span>Reorder Level</span>
+                    <input class="form-control" type="number" min="0" step="1" @bind="newProduct.ReorderPoint" />
+                </label>
+            </div>
+
+            <label class="counter-toggle">
+                <input type="checkbox" @bind="newProduct.IsActive" />
+                <span></span>
+                Active (visible in POS)
+            </label>
+
+            <div class="counter-modal-actions">
+                <button type="button" class="btn btn-counter-light" @onclick="CloseProductModal">Cancel</button>
+                <button type="button" class="btn btn-counter-primary" @onclick="SaveProductAsync" disabled="@(!CanCreateProduct)">Create Product</button>
             </div>
         </div>
     </div>
-</div>
+}
 
 @code {
+    private const string AllCategories = "All categories";
+    private const string AllBrands = "All brands";
+    private const string AllSuppliers = "All suppliers";
+
+    private readonly string[] brandFilters = [AllBrands, "Acme", "Fresh Farm", "Generic"];
+    private readonly string[] supplierFilters = [AllSuppliers, "Fresh Farm Distributors", "Metro Wholesale Co.", "None"];
+    private readonly string[] productBrands = ["Generic", "Acme", "Fresh Farm", "None"];
+    private readonly string[] productSuppliers = ["None", "Fresh Farm Distributors", "Metro Wholesale Co."];
+
     private List<ProductCategoryDto> categories = [];
     private List<ProductDto> products = [];
     private ProductForm newProduct = new();
+    private bool showProductModal;
+    private string search = string.Empty;
+    private string selectedCategory = AllCategories;
+    private string selectedBrand = AllBrands;
+    private string selectedSupplier = AllSuppliers;
+    private string selectedStatus = "Active";
     private string? message;
     private string messageClass = "alert-info";
 
-    private bool CanSave =>
-        !string.IsNullOrWhiteSpace(newProduct.Sku) &&
+    private IEnumerable<ProductDto> FilteredProducts =>
+        products.Where(product =>
+            (string.IsNullOrWhiteSpace(search) ||
+             product.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+             product.Sku.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+             product.Barcode.Contains(search, StringComparison.OrdinalIgnoreCase)) &&
+            (selectedCategory == AllCategories || product.CategoryName == selectedCategory) &&
+            (selectedBrand == AllBrands || BrandForProduct(product) == selectedBrand) &&
+            (selectedSupplier == AllSuppliers || SupplierForProduct(product) == selectedSupplier) &&
+            (selectedStatus == "All statuses" ||
+             (selectedStatus == "Active" && product.IsActive) ||
+             (selectedStatus == "Inactive" && !product.IsActive)));
+
+    private bool CanCreateProduct =>
         !string.IsNullOrWhiteSpace(newProduct.Name) &&
         newProduct.CategoryId != Guid.Empty &&
         newProduct.Price >= 0;
@@ -150,23 +298,38 @@
     {
         categories = await ProductService.GetCategoriesAsync();
         products = await ProductService.GetProductsAsync();
-        if (newProduct.CategoryId == Guid.Empty && categories.Count > 0)
-        {
-            newProduct.CategoryId = categories[0].Id;
-        }
+        EnsureProductDefaults();
+    }
+
+    private void OpenProductModal()
+    {
+        newProduct = new ProductForm();
+        EnsureProductDefaults();
+        showProductModal = true;
+    }
+
+    private void CloseProductModal()
+    {
+        showProductModal = false;
     }
 
     private async Task SaveProductAsync()
     {
+        var sku = string.IsNullOrWhiteSpace(newProduct.Sku)
+            ? GenerateSku(newProduct.Name)
+            : newProduct.Sku.Trim();
+
         var request = new UpsertProductRequest(
-            newProduct.Sku,
+            sku,
             newProduct.Name,
             newProduct.CategoryId,
             newProduct.Price,
             newProduct.QuantityOnHand,
             newProduct.ReorderPoint,
-            newProduct.IsVatExempt,
-            newProduct.IsActive);
+            false,
+            newProduct.IsActive,
+            newProduct.Barcode,
+            newProduct.Cost);
 
         var response = await ProductService.AddAsync(request);
         if (!response.IsSuccessStatusCode)
@@ -178,24 +341,68 @@
 
         messageClass = "alert-success";
         message = $"{newProduct.Name} was added.";
-        newProduct = new ProductForm { CategoryId = categories.FirstOrDefault()?.Id ?? Guid.Empty };
+        showProductModal = false;
         await LoadAsync();
     }
 
-    private static string StockBadge(ProductDto product) =>
-        product.QuantityOnHand <= 10 ? "badge badge-soft-warning" : "badge badge-light";
+    private void EnsureProductDefaults()
+    {
+        if (newProduct.CategoryId == Guid.Empty && categories.Count > 0)
+        {
+            newProduct.CategoryId = categories[0].Id;
+        }
+    }
+
+    private string GenerateSku(string name)
+    {
+        var prefix = new string(name.ToUpperInvariant().Where(char.IsLetterOrDigit).Take(3).ToArray());
+        if (prefix.Length < 3)
+        {
+            prefix = "PRD";
+        }
+
+        return $"{prefix}-{products.Count + 1:000}";
+    }
+
+    private static string BrandForProduct(ProductDto product)
+    {
+        if (product.Sku.StartsWith("COF-", StringComparison.OrdinalIgnoreCase) ||
+            product.Sku.StartsWith("PAS-", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Fresh Farm";
+        }
+
+        if (product.CategoryName.Contains("Retail", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Generic";
+        }
+
+        return product.Sku.Contains("ELEC", StringComparison.OrdinalIgnoreCase) ? "Acme" : "Generic";
+    }
+
+    private static string SupplierForProduct(ProductDto product) =>
+        BrandForProduct(product) == "Fresh Farm" ? "Fresh Farm Distributors" : "Metro Wholesale Co.";
+
+    private static string StockTextClass(ProductDto product) =>
+        product.QuantityOnHand <= product.ReorderPoint ? "stock-text-low" : string.Empty;
 
     private static string Money(decimal value) => $"PHP {value:N2}";
 
     private sealed class ProductForm
     {
         public string Sku { get; set; } = string.Empty;
+        public string Barcode { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public Guid CategoryId { get; set; }
+        public string Brand { get; set; } = "Generic";
+        public string Supplier { get; set; } = "None";
+        public decimal Cost { get; set; }
         public decimal Price { get; set; }
+        public decimal TaxRate { get; set; } = 12;
         public decimal QuantityOnHand { get; set; }
         public decimal ReorderPoint { get; set; } = 5;
-        public bool IsVatExempt { get; set; }
         public bool IsActive { get; set; } = true;
     }
 }

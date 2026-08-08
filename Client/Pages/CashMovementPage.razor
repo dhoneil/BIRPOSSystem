@@ -1,0 +1,77 @@
+@page "/cash-movements"
+
+<div class="counter-page-header">
+    <div>
+        <h1>Cash Movements</h1>
+        <p>Track drawer opening floats, cash in, cash out, drops, and payout reasons.</p>
+    </div>
+    <button type="button" class="btn btn-counter-primary">
+        <i class="fas fa-plus mr-2"></i>Add Movement
+    </button>
+</div>
+
+<section class="cash-summary-grid">
+    <div class="cash-summary-card">
+        <span>Drawer Status</span>
+        <strong>Open</strong>
+        <small>POS-01 / Demo Cashier</small>
+    </div>
+    <div class="cash-summary-card">
+        <span>Opening Float</span>
+        <strong>@Money(2500)</strong>
+        <small>Starting balance</small>
+    </div>
+    <div class="cash-summary-card">
+        <span>Expected Cash</span>
+        <strong>@Money(2500)</strong>
+        <small>Before sales and payouts</small>
+    </div>
+</section>
+
+<section class="counter-filter-panel">
+    <div class="counter-search history-search">
+        <i class="fas fa-search"></i>
+        <input placeholder="Search reason, user, or register..." />
+    </div>
+    <select class="counter-select">
+        <option>All movement types</option>
+        <option>Cash In</option>
+        <option>Cash Out</option>
+        <option>Drop</option>
+        <option>Payout</option>
+    </select>
+    <button type="button" class="btn btn-counter-light ml-auto">
+        <i class="far fa-calendar mr-2"></i>Today
+    </button>
+</section>
+
+<section class="counter-table-card">
+    <div class="table-responsive">
+        <table class="table counter-table mb-0">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Register</th>
+                    <th>Type</th>
+                    <th>Reason</th>
+                    <th>User</th>
+                    <th class="text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>@DateTime.Now.ToString("h:mm tt")</td>
+                    <td>POS-01</td>
+                    <td><span class="status-pill status-active">Opening Float</span></td>
+                    <td>Drawer started</td>
+                    <td>Demo Cashier</td>
+                    <td class="text-right font-weight-bold">@Money(2500)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@code {
+    private static string Money(decimal value) => $"PHP {value:N2}";
+}

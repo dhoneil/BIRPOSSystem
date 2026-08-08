@@ -22,10 +22,13 @@ public sealed class ProductController(ApplicationDbContext db) : ControllerBase
             .Select(x => new ProductDto(
                 x.Id,
                 x.Sku,
+                x.Barcode,
                 x.Name,
                 x.Category!.Name,
+                x.Cost,
                 x.Price,
                 x.QuantityOnHand,
+                x.ReorderPoint,
                 x.IsVatExempt,
                 x.IsActive))
             .ToListAsync();
@@ -57,10 +60,11 @@ public sealed class ProductController(ApplicationDbContext db) : ControllerBase
         var product = new Product
         {
             Sku = sku,
-            Barcode = sku,
+            Barcode = string.IsNullOrWhiteSpace(request.Barcode) ? sku : request.Barcode.Trim(),
             Name = request.Name.Trim(),
             CategoryId = request.CategoryId,
             Price = request.Price,
+            Cost = request.Cost,
             QuantityOnHand = request.QuantityOnHand,
             ReorderPoint = request.ReorderPoint,
             IsVatExempt = request.IsVatExempt,

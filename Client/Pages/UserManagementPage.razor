@@ -1,0 +1,14 @@
+@page "/user-management"
+
+<ModulePlaceholderComponent
+    Kicker="Admin"
+    Title="User Management"
+    Icon="fas fa-user-shield"
+    Workflow="Access"
+    ListTitle="Users"
+    EmptyText="No user records loaded yet."
+    Columns="@columns" />
+
+@code {
+    private static readonly string[] columns = ["Name", "Email", "Role", "Branch", "Status"];
+}

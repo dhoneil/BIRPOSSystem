@@ -1,0 +1,14 @@
+@page "/expenses"
+
+<ModulePlaceholderComponent
+    Kicker="Finance & Customers"
+    Title="Expenses"
+    Icon="fas fa-money-bill-wave"
+    Workflow="Cashflow"
+    ListTitle="Expenses"
+    EmptyText="No expenses yet."
+    Columns="@columns" />
+
+@code {
+    private static readonly string[] columns = ["Date", "Category", "Payee", "Amount", "Payment", "Status"];
+}

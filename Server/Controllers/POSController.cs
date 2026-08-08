@@ -32,10 +32,13 @@ public sealed class POSController(ApplicationDbContext db) : ControllerBase
             .Select(x => new ProductDto(
                 x.Id,
                 x.Sku,
+                x.Barcode,
                 x.Name,
                 x.Category!.Name,
+                x.Cost,
                 x.Price,
                 x.QuantityOnHand,
+                x.ReorderPoint,
                 x.IsVatExempt,
                 x.IsActive))
             .ToListAsync();

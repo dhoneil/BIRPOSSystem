@@ -1,0 +1,78 @@
+@page "/suppliers"
+
+<div class="counter-page-header">
+    <div>
+        <h1>Suppliers</h1>
+        <p>Manage vendor contacts used for purchase orders.</p>
+    </div>
+    <button type="button" class="btn btn-counter-primary">
+        <i class="fas fa-plus mr-2"></i>Add Supplier
+    </button>
+</div>
+
+<div class="counter-search entity-search">
+    <i class="fas fa-search"></i>
+    <input @bind="search" @bind:event="oninput" placeholder="Search suppliers..." />
+</div>
+
+<section class="counter-table-card">
+    <div class="table-responsive">
+        <table class="table counter-table mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Contact</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var supplier in FilteredSuppliers)
+                {
+                    <tr>
+                        <td>
+                            <div class="product-name-cell">
+                                <span class="mini-image supplier-mini"><i class="fas fa-truck"></i></span>
+                                <span>@supplier.Name</span>
+                            </div>
+                        </td>
+                        <td>@supplier.Contact</td>
+                        <td><i class="far fa-envelope mr-2 text-muted"></i>@supplier.Email</td>
+                        <td><i class="fas fa-phone-alt mr-2 text-muted"></i>@supplier.Phone</td>
+                        <td>@supplier.Address</td>
+                        <td class="text-right table-actions">
+                            <button type="button" title="Edit"><i class="far fa-edit"></i></button>
+                            <button type="button" title="Purchase orders"><i class="fas fa-clipboard-list"></i></button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@code {
+    private readonly SupplierRow[] suppliers =
+    [
+        new("Fresh Farm Distributors", "Mark Lee", "mark@freshfarm.com", "555-0102", "-"),
+        new("Metro Wholesale Co.", "Jane Cruz", "jane@metrowholesale.com", "555-0101", "-")
+    ];
+
+    private string search = string.Empty;
+
+    private IEnumerable<SupplierRow> FilteredSuppliers =>
+        suppliers.Where(supplier =>
+            string.IsNullOrWhiteSpace(search) ||
+            supplier.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+            supplier.Contact.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+            supplier.Email.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+    private sealed record SupplierRow(
+        string Name,
+        string Contact,
+        string Email,
+        string Phone,
+        string Address);
+}
