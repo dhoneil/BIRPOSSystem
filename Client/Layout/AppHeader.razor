@@ -1,0 +1,36 @@
+<header class="main-header navbar navbar-expand navbar-white navbar-light birpos-header" role="banner">
+    <ul class="navbar-nav align-items-center">
+        <li class="nav-item">
+            <button type="button" class="nav-link birpos-header-button" data-widget="pushmenu" aria-label="Toggle navigation">
+                <i class="fas fa-bars"></i>
+            </button>
+        </li>
+        <li class="nav-item d-none d-sm-inline-block">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Dashboard</NavLink>
+        </li>
+        <li class="nav-item d-none d-md-inline-block">
+            <NavLink class="nav-link" href="pos">Register</NavLink>
+        </li>
+    </ul>
+
+    <ul class="navbar-nav ml-auto align-items-center">
+        <li class="nav-item">
+            <button type="button"
+                    class="nav-link birpos-theme-toggle"
+                    data-birpos-theme-toggle
+                    aria-label="Toggle light and dark mode"
+                    aria-pressed="false"
+                    title="Switch to dark mode"
+                    onclick="window.birposTheme && window.birposTheme.toggleFromButton(this)">
+                <span class="theme-toggle-track" aria-hidden="true">
+                    <i class="fas fa-sun theme-toggle-end"></i>
+                    <span class="theme-toggle-thumb">
+                        <i class="fas fa-sun" data-birpos-theme-icon></i>
+                    </span>
+                    <i class="fas fa-moon theme-toggle-end"></i>
+                </span>
+                <span class="theme-toggle-label" data-birpos-theme-label>Light</span>
+            </button>
+        </li>
+    </ul>
+</header>
