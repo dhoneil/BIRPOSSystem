@@ -1,6 +1,6 @@
 # BIRPOSSystem Agent Guide
 
-This file is the living handoff for future agents working on BIRPOSSystem. Update it whenever you make a meaningful change so the next agent can understand the app, what exists, what is planned, and what changed most recently.
+This file is the living handoff for future agents working on BIRPOSSystem. Every future agent must update this file before finishing their turn, even for small changes, so the next agent can understand the app, what exists, what is planned, what changed most recently, and what should happen next.
 
 ## App Summary
 
@@ -60,16 +60,31 @@ Scaffolded pages that still need real persistence/API flows:
 5. Build sync properly: automatic upload, retries, last-error display, cloud API integration, conflict resolution, and offline grace enforcement.
 6. Improve quality: unit tests for sale calculations and API behavior, component tests for core flows, seed-data safety, migration review, and end-to-end smoke checks for POS checkout.
 
+## What's Next
+
+Next recommended build: receipt flow.
+
+Scope:
+
+- Add a receipt DTO/API endpoint for retrieving completed sale receipt details by sale ID or invoice number.
+- Show a receipt modal/page immediately after POS checkout.
+- Include store/BIR details, branch/terminal metadata, invoice number, cashier, item lines, discounts, VAT breakdown, payment methods, amount tendered, and change due.
+- Add print support for the receipt view.
+- Add sales history action to view/reprint a receipt.
+
+Why this is next: cash shift management now supports the register day cycle, and receipts are the next user-visible POS requirement plus a foundation for BIR compliance and reprint workflows.
+
 ## Agent Update Protocol
 
-Every future agent must update this file when they make meaningful changes. Keep entries concise and factual.
+Every future agent must update this file before finishing their work. Keep entries concise and factual.
 
 Required update steps:
 
+- Always add or update an `Agent Work Log` entry for the current turn, even if the change is documentation-only or verification-only.
 - Update `Current Feature Map` when a feature changes status from scaffolded to implemented, or when behavior materially changes.
 - Update `Data And Domain Notes` when models, migrations, seeding, calculations, or persistence rules change.
 - Update `Near-Term Plan` when roadmap priorities are completed, removed, or superseded.
-- Add a dated entry to `Agent Work Log` with what changed, files touched at a high level, and how it was verified.
+- Always update `What's Next` before finishing a task. It must name the single best next build, summarize scope, explain why it follows from the current state, and be phrased as a clear recommendation to the next agent.
 - Do not remove prior log entries unless the user explicitly asks for cleanup.
 
 Suggested log format:
@@ -111,3 +126,10 @@ If the work touches sales math, add or run focused tests around `Shared/Sales/Sa
 - Changed: Dashboard cash position now uses open-shift drawer math; sales creation now requires an open cash shift.
 - Verified: `dotnet build BIRPOSSystem.slnx` passed with 0 warnings and 0 errors. The app was not started for this change.
 - Notes: EF generated the migration successfully, with an EF tools/runtime patch-version warning (`10.0.6` tools vs `10.0.9` runtime).
+
+### 2026-08-08 - What's Next protocol
+
+- Changed: Added a dedicated `What's Next` section and made updating it mandatory for future agents.
+- Changed: Strengthened the top-level and protocol wording so future agents always update `AGENTS.md` and always suggest the next best build before finishing.
+- Verified: Documentation-only change; app was not started.
+- Notes: Current next recommended build is receipt flow.
