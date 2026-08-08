@@ -68,6 +68,10 @@ public sealed class SaleController(ApplicationDbContext db) : ControllerBase
         var terminal = await db.PosTerminals.Where(x => x.IsActive).OrderBy(x => x.CreatedAt).FirstAsync();
         var series = await db.ReceiptSeries.Where(x => x.IsActive && x.TerminalId == terminal.Id).FirstAsync();
         var shift = await db.CashShifts.Where(x => x.Status == ShiftStatus.Open).OrderByDescending(x => x.OpenedAt).FirstOrDefaultAsync();
+        if (shift is null)
+        {
+            return BadRequest("Open a cash shift before taking sales.");
+        }
 
         var productIds = request.Lines.Select(x => x.ProductId).Distinct().ToArray();
         var products = await db.Products.Where(x => productIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id);
@@ -113,9 +117,9 @@ public sealed class SaleController(ApplicationDbContext db) : ControllerBase
             TenantId = tenant.Id,
             BranchId = branch.Id,
             TerminalId = terminal.Id,
-            ShiftId = shift?.Id,
+            ShiftId = shift.Id,
             InvoiceNumber = invoiceNumber,
-            CashierName = shift?.CashierName ?? User.Identity?.Name ?? "Demo Cashier",
+            CashierName = shift.CashierName,
             CustomerName = request.CustomerName?.Trim() ?? string.Empty,
             OrderType = string.IsNullOrWhiteSpace(request.OrderType) ? "Retail" : request.OrderType,
             GrossTotal = calculation.GrossTotal,

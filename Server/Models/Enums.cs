@@ -32,6 +32,16 @@ public enum ShiftStatus
     Closed = 2
 }
 
+public enum CashMovementType
+{
+    OpeningFloat = 1,
+    CashIn = 2,
+    CashOut = 3,
+    Drop = 4,
+    Payout = 5,
+    ClosingCount = 6
+}
+
 public enum SyncItemStatus
 {
     Pending = 1,

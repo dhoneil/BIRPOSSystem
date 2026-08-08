@@ -23,7 +23,7 @@ Implemented or partially implemented workflows:
 - Product catalog: product and category loading, product filtering, product create modal, SKU auto-generation, duplicate SKU handling through API conflict response, and stock/status display.
 - Categories: category cards with product counts from the current product list.
 - Brands: derived brand cards and product counts based on product SKU/category heuristics.
-- Cash movements: static drawer summary and movement table scaffold for opening float/cash flow UX.
+- Cash movements: live cash shift workspace with open shift, opening float, cash in, cash out, cash drop, payout, close shift, expected cash, variance, audit logging, and sync outbox queueing.
 - BIR reports: same-day Z-reading preview with branch, terminal, invoice range, gross sales, discounts, VAT totals, net sales, void/refund placeholders, and print action.
 - Store setup: seeded tenant, branch, terminal, receipt series, roles/permissions, and subscription setup overview.
 - Sync center: local-first sync status and manual upload endpoint that marks pending outbox items as uploaded.
@@ -38,22 +38,22 @@ Scaffolded pages that still need real persistence/API flows:
 - Expenses
 - Customers
 - User management
-- Full cash movement creation/close-shift workflows
 - Void/refund/reversal workflows
 - Receipt printing and ESC/POS bridge
 - Automatic cloud sync and conflict handling
 
 ## Data And Domain Notes
 
-- `ApplicationDbContext` owns tenants, branches, POS terminals, product categories, products, inventory ledger entries, receipt series, cash shifts, sales transactions/lines/payments, Z-readings, audit logs, and sync outbox items.
+- `ApplicationDbContext` owns tenants, branches, POS terminals, product categories, products, inventory ledger entries, receipt series, cash shifts, cash movements, sales transactions/lines/payments, Z-readings, audit logs, and sync outbox items.
 - `DatabaseSeeder` migrates the database, seeds roles/users, and creates the Northstar Market Cafe demo tenant/branch/terminal/products when no tenant exists.
 - `SaleCalculator` applies line validation, manual discount allocation, VAT calculation, VAT-exempt totals, and money rounding.
-- Sale creation is transactional: it validates cart/payments, calculates totals server-side, consumes the next receipt number, updates inventory for tracked products, writes sales/audit/outbox records, and commits.
+- Sale creation is transactional: it requires an open cash shift, validates cart/payments, calculates totals server-side, consumes the next receipt number, updates inventory for tracked products, writes sales/audit/outbox records, and commits.
+- Cash shift expected cash is opening cash plus cash sale impact and cash-in movements, minus cash out, drops, and payouts. Cash sale impact subtracts change due from cash tendered.
 - The local SQLite database is `Server/Data/app.db`. Treat it as developer data unless the user explicitly asks for database resets or migrations.
 
 ## Near-Term Plan
 
-1. Complete register operations: open/close shift, cash in/out/drop/payout, payment method selection, held orders, returns, voids, and receipts.
+1. Complete register operations: payment method selection, held orders, returns, voids, and receipts.
 2. Make inventory first-class: suppliers, purchase orders, receiving, stock adjustments, inventory valuation, reorder suggestions, and barcode label generation.
 3. Harden compliance: persisted Z-readings, X-readings, audit trail views, immutable posted sales, BIR export formats, receipt layout settings, and terminal series controls.
 4. Expand administration: user/role management UI, branch/terminal CRUD, tenant subscription/license cache, permission policies, and store settings.
@@ -102,3 +102,12 @@ If the work touches sales math, add or run focused tests around `Shared/Sales/Sa
 - Verified: `dotnet build BIRPOSSystem.slnx` passed with 0 warnings and 0 errors; local app started at `http://localhost:5297` and served `theme.js` with HTTP 200.
 - Verified: Sidebar brand fix was reviewed by CSS inspection only; the app was not started for this follow-up.
 - Notes: Existing uncommitted change in `Server/Data/app.db` was present before this work and was not modified intentionally.
+
+### 2026-08-08 - Cash shift management
+
+- Changed: Added `CashMovement` domain model, EF mapping, and `AddCashMovements` migration.
+- Changed: Added cash shift DTOs/API endpoints for workspace state, opening shifts, adding drawer movements, and closing shifts.
+- Changed: Replaced the static cash movements page with a live UI for drawer status, movement history, expected cash, close counts, and variance.
+- Changed: Dashboard cash position now uses open-shift drawer math; sales creation now requires an open cash shift.
+- Verified: `dotnet build BIRPOSSystem.slnx` passed with 0 warnings and 0 errors. The app was not started for this change.
+- Notes: EF generated the migration successfully, with an EF tools/runtime patch-version warning (`10.0.6` tools vs `10.0.9` runtime).

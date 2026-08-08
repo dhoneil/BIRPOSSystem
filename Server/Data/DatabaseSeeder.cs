@@ -96,6 +96,17 @@ public static class DatabaseSeeder
         db.AddRange(tenant, branch, terminal, series, shift);
         db.ProductCategories.AddRange(categories);
         db.Products.AddRange(products);
+        db.CashMovements.Add(new CashMovement
+        {
+            CashShift = shift,
+            Branch = branch,
+            Terminal = terminal,
+            Type = CashMovementType.OpeningFloat,
+            Amount = shift.OpeningCash,
+            Reason = "Seeded opening float",
+            UserName = shift.CashierName,
+            ReferenceNumber = $"{terminal.Code}-SEED"
+        });
 
         await db.SaveChangesAsync();
     }

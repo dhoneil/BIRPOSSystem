@@ -10,6 +10,7 @@ builder.Services.AddScoped<IPOSService, POSService>();
 builder.Services.AddScoped<ISalesService, SalesService>();
 builder.Services.AddScoped<IBIRReportService, BIRReportService>();
 builder.Services.AddScoped<ISyncService, SyncService>();
+builder.Services.AddScoped<ICashShiftService, CashShiftService>();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthenticationStateDeserialization();

@@ -15,4 +15,5 @@ public sealed class CashShift : EntityBase
     public decimal OpeningCash { get; set; }
     public decimal ClosingCash { get; set; }
     public ShiftStatus Status { get; set; } = ShiftStatus.Open;
+    public ICollection<CashMovement> Movements { get; set; } = [];
 }

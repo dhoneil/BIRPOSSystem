@@ -1,77 +1,455 @@
 @page "/cash-movements"
+@inject ICashShiftService CashShiftService
 
 <div class="counter-page-header">
     <div>
         <h1>Cash Movements</h1>
-        <p>Track drawer opening floats, cash in, cash out, drops, and payout reasons.</p>
+        <p>Track drawer opening floats, cash in, cash out, drops, payouts, and shift close counts.</p>
     </div>
-    <button type="button" class="btn btn-counter-primary">
-        <i class="fas fa-plus mr-2"></i>Add Movement
-    </button>
+    <div class="counter-modal-actions mt-0">
+        @if (Summary?.IsOpen == true)
+        {
+            <button type="button" class="btn btn-counter-light" @onclick="OpenCloseShiftModal">
+                <i class="fas fa-lock mr-2"></i>Close Shift
+            </button>
+            <button type="button" class="btn btn-counter-primary" @onclick="OpenMovementModal">
+                <i class="fas fa-plus mr-2"></i>Add Movement
+            </button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-counter-primary" @onclick="OpenShiftModal">
+                <i class="fas fa-lock-open mr-2"></i>Open Shift
+            </button>
+        }
+    </div>
 </div>
 
-<section class="cash-summary-grid">
-    <div class="cash-summary-card">
-        <span>Drawer Status</span>
-        <strong>Open</strong>
-        <small>POS-01 / Demo Cashier</small>
-    </div>
-    <div class="cash-summary-card">
-        <span>Opening Float</span>
-        <strong>@Money(2500)</strong>
-        <small>Starting balance</small>
-    </div>
-    <div class="cash-summary-card">
-        <span>Expected Cash</span>
-        <strong>@Money(2500)</strong>
-        <small>Before sales and payouts</small>
-    </div>
-</section>
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert @messageClass counter-alert">@message</div>
+}
 
-<section class="counter-filter-panel">
-    <div class="counter-search history-search">
-        <i class="fas fa-search"></i>
-        <input placeholder="Search reason, user, or register..." />
+@if (workspace is null)
+{
+    <div class="counter-loading">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <span>Loading drawer...</span>
     </div>
-    <select class="counter-select">
-        <option>All movement types</option>
-        <option>Cash In</option>
-        <option>Cash Out</option>
-        <option>Drop</option>
-        <option>Payout</option>
-    </select>
-    <button type="button" class="btn btn-counter-light ml-auto">
-        <i class="far fa-calendar mr-2"></i>Today
-    </button>
-</section>
+}
+else
+{
+    <section class="cash-summary-grid">
+        <div class="cash-summary-card">
+            <span>Drawer Status</span>
+            <strong>@Summary!.Status</strong>
+            <small>@Summary.TerminalCode / @Summary.CashierName</small>
+        </div>
+        <div class="cash-summary-card">
+            <span>Opening Float</span>
+            <strong>@Money(Summary.OpeningCash)</strong>
+            <small>@(Summary.OpenedAt is null ? "No active drawer" : Summary.OpenedAt.Value.ToLocalTime().ToString("MMM d, h:mm tt"))</small>
+        </div>
+        <div class="cash-summary-card">
+            <span>Cash Sales</span>
+            <strong>@Money(Summary.CashSales)</strong>
+            <small>Net of change due</small>
+        </div>
+        <div class="cash-summary-card">
+            <span>Cash In</span>
+            <strong>@Money(Summary.CashIn)</strong>
+            <small>Added outside sales</small>
+        </div>
+        <div class="cash-summary-card">
+            <span>Cash Out / Drops</span>
+            <strong>@Money(Summary.CashOut + Summary.Drops + Summary.Payouts)</strong>
+            <small>Out @Money(Summary.CashOut) / Drops @Money(Summary.Drops) / Payouts @Money(Summary.Payouts)</small>
+        </div>
+        <div class="cash-summary-card">
+            <span>@(Summary.ClosingCash is null ? "Expected Cash" : "Variance")</span>
+            <strong>@(Summary.ClosingCash is null ? Money(Summary.ExpectedCash) : SignedMoney(Summary.Variance ?? 0))</strong>
+            <small>@(Summary.ClosingCash is null ? "Current drawer target" : $"Closed with {Money(Summary.ClosingCash.Value)}")</small>
+        </div>
+    </section>
 
-<section class="counter-table-card">
-    <div class="table-responsive">
-        <table class="table counter-table mb-0">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Register</th>
-                    <th>Type</th>
-                    <th>Reason</th>
-                    <th>User</th>
-                    <th class="text-right">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>@DateTime.Now.ToString("h:mm tt")</td>
-                    <td>POS-01</td>
-                    <td><span class="status-pill status-active">Opening Float</span></td>
-                    <td>Drawer started</td>
-                    <td>Demo Cashier</td>
-                    <td class="text-right font-weight-bold">@Money(2500)</td>
-                </tr>
-            </tbody>
-        </table>
+    <section class="counter-filter-panel">
+        <div class="counter-search history-search">
+            <i class="fas fa-search"></i>
+            <input @bind="search" @bind:event="oninput" placeholder="Search reason, user, reference, or register..." />
+        </div>
+        <select class="counter-select" @bind="selectedMovementType">
+            <option value="@AllMovementTypes">All movement types</option>
+            @foreach (var type in movementTypeFilters)
+            {
+                <option value="@type.Key">@type.Label</option>
+            }
+        </select>
+        <button type="button" class="btn btn-counter-light ml-auto" @onclick="LoadAsync" disabled="@isSaving">
+            <i class="fas fa-sync-alt mr-2"></i>Refresh
+        </button>
+    </section>
+
+    <section class="counter-table-card">
+        @if (!FilteredMovements.Any())
+        {
+            <div class="empty-state m-3">
+                <i class="fas fa-cash-register fa-2x mb-2"></i>
+                <span>No cash movements found.</span>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table counter-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Register</th>
+                            <th>Type</th>
+                            <th>Reason</th>
+                            <th>User</th>
+                            <th>Reference</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var movement in FilteredMovements)
+                        {
+                            <tr>
+                                <td>@movement.PostedAt.ToLocalTime().ToString("MMM d, h:mm tt")</td>
+                                <td>@movement.TerminalCode</td>
+                                <td><span class="status-pill @MovementStatusClass(movement)">@movement.TypeLabel</span></td>
+                                <td>@movement.Reason</td>
+                                <td>@movement.UserName</td>
+                                <td class="sku-cell">@movement.ReferenceNumber</td>
+                                <td class="text-right font-weight-bold">@SignedMoney(movement.SignedAmount)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@if (showOpenShiftModal)
+{
+    <div class="counter-modal-backdrop">
+        <div class="counter-modal" @onclick:stopPropagation="true">
+            <div class="counter-modal-header">
+                <h2>Open Cash Shift</h2>
+                <button type="button" class="icon-only-button" @onclick="CloseModals" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="form-grid two-columns">
+                <label>
+                    <span>Cashier <em>*</em></span>
+                    <input class="form-control" @bind="openShift.CashierName" />
+                </label>
+                <label>
+                    <span>Opening Cash</span>
+                    <input class="form-control" type="number" min="0" step="0.01" @bind="openShift.OpeningCash" />
+                </label>
+            </div>
+
+            <div class="counter-modal-actions">
+                <button type="button" class="btn btn-counter-light" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-counter-primary" @onclick="OpenShiftAsync" disabled="@(!CanOpenShift)">
+                    <i class="fas fa-lock-open mr-2"></i>Open Shift
+                </button>
+            </div>
+        </div>
     </div>
-</section>
+}
+
+@if (showMovementModal)
+{
+    <div class="counter-modal-backdrop">
+        <div class="counter-modal" @onclick:stopPropagation="true">
+            <div class="counter-modal-header">
+                <h2>Add Cash Movement</h2>
+                <button type="button" class="icon-only-button" @onclick="CloseModals" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="form-grid two-columns">
+                <label>
+                    <span>Type</span>
+                    <select class="form-control" @bind="movementForm.Type">
+                        @foreach (var type in manualMovementTypes)
+                        {
+                            <option value="@type.Key">@type.Label</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    <span>Amount <em>*</em></span>
+                    <input class="form-control" type="number" min="0.01" step="0.01" @bind="movementForm.Amount" />
+                </label>
+            </div>
+
+            <label>
+                <span>Reason <em>*</em></span>
+                <textarea class="form-control" rows="3" @bind="movementForm.Reason"></textarea>
+            </label>
+
+            <div class="counter-modal-actions">
+                <button type="button" class="btn btn-counter-light" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-counter-primary" @onclick="AddMovementAsync" disabled="@(!CanAddMovement)">
+                    <i class="fas fa-save mr-2"></i>Save Movement
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showCloseShiftModal)
+{
+    <div class="counter-modal-backdrop">
+        <div class="counter-modal" @onclick:stopPropagation="true">
+            <div class="counter-modal-header">
+                <h2>Close Cash Shift</h2>
+                <button type="button" class="icon-only-button" @onclick="CloseModals" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <section class="cash-summary-grid">
+                <div class="cash-summary-card">
+                    <span>Expected Cash</span>
+                    <strong>@Money(Summary?.ExpectedCash ?? 0)</strong>
+                    <small>Calculated drawer target</small>
+                </div>
+                <div class="cash-summary-card">
+                    <span>Closing Count</span>
+                    <strong>@Money(closeShift.ClosingCash)</strong>
+                    <small>Physical cash count</small>
+                </div>
+                <div class="cash-summary-card">
+                    <span>Variance</span>
+                    <strong>@SignedMoney(closeShift.ClosingCash - (Summary?.ExpectedCash ?? 0))</strong>
+                    <small>Closing count minus expected</small>
+                </div>
+            </section>
+
+            <label>
+                <span>Closing Cash <em>*</em></span>
+                <input class="form-control" type="number" min="0" step="0.01" @bind="closeShift.ClosingCash" />
+            </label>
+            <label>
+                <span>Notes</span>
+                <textarea class="form-control" rows="3" @bind="closeShift.Notes"></textarea>
+            </label>
+
+            <div class="counter-modal-actions">
+                <button type="button" class="btn btn-counter-light" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-counter-primary" @onclick="CloseShiftAsync" disabled="@(!CanCloseShift)">
+                    <i class="fas fa-lock mr-2"></i>Close Shift
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
+    private const string AllMovementTypes = "All movement types";
+
+    private readonly (string Key, string Label)[] movementTypeFilters =
+    [
+        ("OpeningFloat", "Opening Float"),
+        ("CashIn", "Cash In"),
+        ("CashOut", "Cash Out"),
+        ("Drop", "Cash Drop"),
+        ("Payout", "Payout"),
+        ("ClosingCount", "Closing Count")
+    ];
+
+    private readonly (string Key, string Label)[] manualMovementTypes =
+    [
+        ("CashIn", "Cash In"),
+        ("CashOut", "Cash Out"),
+        ("Drop", "Cash Drop"),
+        ("Payout", "Payout")
+    ];
+
+    private CashShiftWorkspaceDto? workspace;
+    private readonly OpenShiftForm openShift = new();
+    private readonly CashMovementForm movementForm = new();
+    private readonly CloseShiftForm closeShift = new();
+    private bool showOpenShiftModal;
+    private bool showMovementModal;
+    private bool showCloseShiftModal;
+    private bool isSaving;
+    private string search = string.Empty;
+    private string selectedMovementType = AllMovementTypes;
+    private string? message;
+    private string messageClass = "alert-info";
+
+    private CashShiftSummaryDto? Summary => workspace?.Summary;
+
+    private IEnumerable<CashMovementDto> FilteredMovements =>
+        (workspace?.Movements ?? []).Where(movement =>
+            (selectedMovementType == AllMovementTypes || movement.Type == selectedMovementType) &&
+            (string.IsNullOrWhiteSpace(search) ||
+             movement.TerminalCode.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+             movement.TypeLabel.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+             movement.Reason.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+             movement.UserName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+             movement.ReferenceNumber.Contains(search, StringComparison.OrdinalIgnoreCase)));
+
+    private bool CanOpenShift =>
+        !isSaving &&
+        !string.IsNullOrWhiteSpace(openShift.CashierName) &&
+        openShift.OpeningCash >= 0;
+
+    private bool CanAddMovement =>
+        !isSaving &&
+        Summary?.IsOpen == true &&
+        movementForm.Amount > 0 &&
+        !string.IsNullOrWhiteSpace(movementForm.Reason);
+
+    private bool CanCloseShift =>
+        !isSaving &&
+        Summary?.IsOpen == true &&
+        closeShift.ClosingCash >= 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        workspace = await CashShiftService.GetWorkspaceAsync();
+        if (Summary?.IsOpen == true)
+        {
+            closeShift.ClosingCash = Summary.ExpectedCash;
+        }
+    }
+
+    private void OpenShiftModal()
+    {
+        message = null;
+        openShift.CashierName = Summary?.CashierName is { Length: > 0 } cashier && cashier != "No open shift"
+            ? cashier
+            : "Demo Cashier";
+        openShift.OpeningCash = 0;
+        showOpenShiftModal = true;
+    }
+
+    private void OpenMovementModal()
+    {
+        message = null;
+        movementForm.Type = "CashIn";
+        movementForm.Amount = 0;
+        movementForm.Reason = string.Empty;
+        showMovementModal = true;
+    }
+
+    private void OpenCloseShiftModal()
+    {
+        message = null;
+        closeShift.ClosingCash = Summary?.ExpectedCash ?? 0;
+        closeShift.Notes = string.Empty;
+        showCloseShiftModal = true;
+    }
+
+    private void CloseModals()
+    {
+        showOpenShiftModal = false;
+        showMovementModal = false;
+        showCloseShiftModal = false;
+    }
+
+    private async Task OpenShiftAsync()
+    {
+        await SaveAsync(
+            () => CashShiftService.OpenAsync(new OpenCashShiftRequest(openShift.CashierName, openShift.OpeningCash)),
+            "Cash shift opened.");
+    }
+
+    private async Task AddMovementAsync()
+    {
+        if (Summary?.ShiftId is not Guid shiftId)
+        {
+            return;
+        }
+
+        await SaveAsync(
+            () => CashShiftService.AddMovementAsync(shiftId, new AddCashMovementRequest(movementForm.Type, movementForm.Amount, movementForm.Reason)),
+            "Cash movement recorded.");
+    }
+
+    private async Task CloseShiftAsync()
+    {
+        if (Summary?.ShiftId is not Guid shiftId)
+        {
+            return;
+        }
+
+        await SaveAsync(
+            () => CashShiftService.CloseAsync(shiftId, new CloseCashShiftRequest(closeShift.ClosingCash, closeShift.Notes)),
+            "Cash shift closed.");
+    }
+
+    private async Task SaveAsync(Func<Task<HttpResponseMessage>> action, string fallbackMessage)
+    {
+        isSaving = true;
+        message = null;
+        try
+        {
+            var response = await action();
+            if (!response.IsSuccessStatusCode)
+            {
+                messageClass = "alert-danger";
+                message = await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<CashShiftActionResponse>();
+            messageClass = "alert-success";
+            message = result?.Message ?? fallbackMessage;
+            CloseModals();
+            await LoadAsync();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string MovementStatusClass(CashMovementDto movement) =>
+        movement.Type switch
+        {
+            "OpeningFloat" or "CashIn" => "status-active",
+            "ClosingCount" => "status-inactive",
+            _ => "status-warning"
+        };
+
     private static string Money(decimal value) => $"PHP {value:N2}";
+
+    private static string SignedMoney(decimal value) =>
+        value < 0 ? $"-{Money(Math.Abs(value))}" : $"+{Money(value)}";
+
+    private sealed class OpenShiftForm
+    {
+        public string CashierName { get; set; } = "Demo Cashier";
+        public decimal OpeningCash { get; set; }
+    }
+
+    private sealed class CashMovementForm
+    {
+        public string Type { get; set; } = "CashIn";
+        public decimal Amount { get; set; }
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    private sealed class CloseShiftForm
+    {
+        public decimal ClosingCash { get; set; }
+        public string Notes { get; set; } = string.Empty;
+    }
 }

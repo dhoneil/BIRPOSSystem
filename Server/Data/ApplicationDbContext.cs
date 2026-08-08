@@ -19,6 +19,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<InventoryLedgerEntry> InventoryLedgerEntries => Set<InventoryLedgerEntry>();
     public DbSet<ReceiptSeries> ReceiptSeries => Set<ReceiptSeries>();
     public DbSet<CashShift> CashShifts => Set<CashShift>();
+    public DbSet<CashMovement> CashMovements => Set<CashMovement>();
     public DbSet<SalesTransaction> SalesTransactions => Set<SalesTransaction>();
     public DbSet<SalesLine> SalesLines => Set<SalesLine>();
     public DbSet<SalesPayment> SalesPayments => Set<SalesPayment>();
@@ -82,6 +83,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             entity.Property(x => x.CashierName).HasMaxLength(120);
             entity.HasIndex(x => new { x.TerminalId, x.Status });
+        });
+
+        builder.Entity<CashMovement>(entity =>
+        {
+            entity.Property(x => x.Reason).HasMaxLength(240);
+            entity.Property(x => x.UserName).HasMaxLength(120);
+            entity.Property(x => x.ReferenceNumber).HasMaxLength(80);
+            entity.HasIndex(x => new { x.CashShiftId, x.PostedAt });
+            entity.HasIndex(x => new { x.TerminalId, x.PostedAt });
+            entity.HasOne(x => x.CashShift)
+                .WithMany(x => x.Movements)
+                .HasForeignKey(x => x.CashShiftId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<SalesTransaction>(entity =>

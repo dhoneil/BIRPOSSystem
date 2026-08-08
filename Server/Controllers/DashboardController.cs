@@ -37,9 +37,37 @@ public sealed class DashboardController(ApplicationDbContext db) : ControllerBas
             .Select(x => x.UploadedAt!.Value)
             .FirstOrDefaultAsync();
 
-        var cashPayments = await db.SalesPayments
-            .Where(x => x.Method == "Cash" && x.SalesTransaction!.SoldAt >= start && x.SalesTransaction.SoldAt < end)
-            .SumAsync(x => (decimal?)x.Amount) ?? 0;
+        var cashInDrawer = 0m;
+        if (shift is not null)
+        {
+            var shiftSales = await db.SalesTransactions
+                .AsNoTracking()
+                .Include(x => x.Payments)
+                .Where(x => x.ShiftId == shift.Id && x.Status == SaleStatus.Completed)
+                .ToListAsync();
+
+            var cashSales = shiftSales.Sum(sale =>
+            {
+                var cashTendered = sale.Payments
+                    .Where(payment => payment.Method.Equals("Cash", StringComparison.OrdinalIgnoreCase))
+                    .Sum(payment => payment.Amount);
+
+                return Math.Max(0, cashTendered - sale.ChangeDue);
+            });
+
+            var cashMovements = await db.CashMovements
+                .AsNoTracking()
+                .Where(x => x.CashShiftId == shift.Id)
+                .ToListAsync();
+
+            cashInDrawer =
+                shift.OpeningCash +
+                cashSales +
+                cashMovements.Where(x => x.Type == CashMovementType.CashIn).Sum(x => x.Amount) -
+                cashMovements.Where(x => x.Type == CashMovementType.CashOut).Sum(x => x.Amount) -
+                cashMovements.Where(x => x.Type == CashMovementType.Drop).Sum(x => x.Amount) -
+                cashMovements.Where(x => x.Type == CashMovementType.Payout).Sum(x => x.Amount);
+        }
 
         var alerts = await db.Products
             .Where(x => x.IsActive && x.TrackInventory && x.QuantityOnHand <= x.ReorderPoint)
@@ -55,7 +83,7 @@ public sealed class DashboardController(ApplicationDbContext db) : ControllerBas
         var summary = new DashboardSummaryDto(
             sales.Where(x => x.Status == SaleStatus.Completed).Sum(x => x.NetTotal),
             sales.Count(x => x.Status == SaleStatus.Completed),
-            (shift?.OpeningCash ?? 0) + cashPayments,
+            cashInDrawer,
             pendingSync,
             shift is null ? "No open shift" : $"{shift.CashierName} opened {shift.OpenedAt:hh:mm tt}",
             $"{tenant.SubscriptionStatus} until {tenant.SubscriptionValidUntil:MMM d, yyyy}",
